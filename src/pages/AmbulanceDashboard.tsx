@@ -298,26 +298,27 @@ export default function AmbulanceDashboard() {
       {/* Header */}
       <nav className={`border-b px-4 py-3 transition-colors ${hasActiveEmergency ? 'bg-emergency/10 border-emergency/30' : 'bg-card border-border'}`}>
         <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className={`w-6 h-6 ${hasActiveEmergency ? 'text-emergency animate-pulse' : 'text-muted-foreground'}`} />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <AlertTriangle className={`w-5 h-5 sm:w-6 sm:h-6 ${hasActiveEmergency ? 'text-emergency animate-pulse' : 'text-muted-foreground'}`} />
             <div>
-              <span className="font-bold">Ambulance Dashboard</span>
-              <Badge variant="outline" className="ml-2">{ambulance?.vehicle_number}</Badge>
+              <span className="font-bold text-sm sm:text-base">Ambulance Dashboard</span>
+              <Badge variant="outline" className="ml-2 text-xs">{ambulance?.vehicle_number}</Badge>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" onClick={() => navigate('/')}>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button variant="outline" size="sm" onClick={() => navigate('/')} className="hidden sm:inline-flex">
               Dashboard
             </Button>
-            <span className="text-sm text-muted-foreground hidden sm:block">{profile?.full_name || profile?.email}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground hidden md:block">{profile?.full_name || profile?.email}</span>
             <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline ml-2">Sign Out</span>
             </Button>
           </div>
         </div>
       </nav>
 
-      <div className="container mx-auto p-4 md:p-6 space-y-6">
+      <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
         {/* Active Emergency Token Display */}
         {hasActiveEmergency && (
           <Card className="border-emergency shadow-emergency">
@@ -469,32 +470,36 @@ export default function AmbulanceDashboard() {
               )}
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
                 {hasRouteSelected && (
-                  <Button variant="emergency" size="lg" onClick={handleStartJourney}>
+                  <Button variant="emergency" size="lg" onClick={handleStartJourney} className="w-full sm:w-auto">
                     <Play className="w-5 h-5 mr-2" />
-                    START JOURNEY TO PATIENT
+                    <span className="hidden sm:inline">START JOURNEY TO PATIENT</span>
+                    <span className="sm:hidden">START JOURNEY</span>
                   </Button>
                 )}
                 {isGoingToPatient && (
-                  <Button variant="default" size="lg" onClick={handleArrivedAtPatient} className="bg-green-600 hover:bg-green-700">
+                  <Button variant="default" size="lg" onClick={handleArrivedAtPatient} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
                     <CheckCircle className="w-5 h-5 mr-2" />
-                    ARRIVED AT PATIENT
+                    <span className="hidden sm:inline">ARRIVED AT PATIENT</span>
+                    <span className="sm:hidden">ARRIVED</span>
                   </Button>
                 )}
                 {isAtPatient && (
-                  <Button variant="emergency" size="lg" onClick={handleStartToHospital}>
+                  <Button variant="emergency" size="lg" onClick={handleStartToHospital} className="w-full sm:w-auto">
                     <Play className="w-5 h-5 mr-2" />
-                    START TO HOSPITAL
+                    <span className="hidden sm:inline">START TO HOSPITAL</span>
+                    <span className="sm:hidden">TO HOSPITAL</span>
                   </Button>
                 )}
                 {isGoingToHospital && (
-                  <Button variant="default" size="lg" onClick={handleCompleteEmergency} className="bg-green-600 hover:bg-green-700">
+                  <Button variant="default" size="lg" onClick={handleCompleteEmergency} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto">
                     <CheckCircle className="w-5 h-5 mr-2" />
-                    ARRIVED AT HOSPITAL
+                    <span className="hidden sm:inline">ARRIVED AT HOSPITAL</span>
+                    <span className="sm:hidden">ARRIVED</span>
                   </Button>
                 )}
-                <Button variant="outline" onClick={handleCancelEmergency}>
+                <Button variant="outline" onClick={handleCancelEmergency} className="w-full sm:w-auto">
                   <X className="w-4 h-4 mr-2" />
                   Cancel
                 </Button>
@@ -569,31 +574,31 @@ export default function AmbulanceDashboard() {
         )}
 
         {/* Location & Status */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <MapPin className="w-5 h-5" />
                 Current Location
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Latitude</p>
-                  <p className="font-mono text-lg">{ambulance?.current_lat?.toFixed(6) ?? '—'}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Latitude</p>
+                  <p className="font-mono text-sm sm:text-lg">{ambulance?.current_lat?.toFixed(6) ?? '—'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Longitude</p>
-                  <p className="font-mono text-lg">{ambulance?.current_lng?.toFixed(6) ?? '—'}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Longitude</p>
+                  <p className="font-mono text-sm sm:text-lg">{ambulance?.current_lng?.toFixed(6) ?? '—'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Speed</p>
-                  <p className="font-mono text-lg">{ambulance?.speed?.toFixed(0) ?? 0} km/h</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Speed</p>
+                  <p className="font-mono text-sm sm:text-lg">{ambulance?.speed?.toFixed(0) ?? 0} km/h</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Heading</p>
-                  <p className="font-mono text-lg">{ambulance?.heading?.toFixed(0) ?? 0}°</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Heading</p>
+                  <p className="font-mono text-sm sm:text-lg">{ambulance?.heading?.toFixed(0) ?? 0}°</p>
                 </div>
               </div>
 
@@ -602,6 +607,7 @@ export default function AmbulanceDashboard() {
                   size="sm"
                   variant={isSimulating ? 'destructive' : 'outline'}
                   onClick={isSimulating ? stopSimulation : startSimulation}
+                  className="text-xs sm:text-sm"
                 >
                   {isSimulating ? 'Stop Simulation' : 'Simulate Movement'}
                 </Button>
@@ -611,13 +617,13 @@ export default function AmbulanceDashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Navigation className="w-5 h-5" />
                 Live Map
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px] rounded-lg overflow-hidden">
+              <div className="h-[250px] sm:h-[300px] rounded-lg overflow-hidden">
                 <Map
                   center={ambulance ? [ambulance.current_lat, ambulance.current_lng] : [30.7333, 76.7794]}
                   zoom={14}

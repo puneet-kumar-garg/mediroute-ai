@@ -117,19 +117,19 @@ export default function Index() {
       <nav className="border-b border-border bg-card px-4 py-3">
         <div className="container mx-auto flex justify-between items-center">
           <Logo size="sm" />
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{profile?.email}</span>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <span className="text-xs sm:text-sm text-muted-foreground hidden sm:block">{profile?.email}</span>
             <Button variant="ghost" size="sm" onClick={signOut}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
+              <LogOut className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Sign Out</span>
             </Button>
           </div>
         </div>
       </nav>
 
-      <div className="container mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-6">Select Dashboard</h1>
-        <div className="grid md:grid-cols-3 gap-6 max-w-4xl">
+      <div className="container mx-auto p-4 sm:p-6">
+        <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Select Dashboard</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-4xl">
           <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/ambulance')}>
             <CardHeader>
               <div className="w-12 h-12 rounded-xl bg-emergency/10 flex items-center justify-center mb-2">

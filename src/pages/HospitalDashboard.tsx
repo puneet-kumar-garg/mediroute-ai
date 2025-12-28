@@ -777,8 +777,37 @@ export default function HospitalDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-background flex flex-col md:flex-row">
+      {/* Mobile Navigation */}
+      <div className="md:hidden border-b bg-card">
+        <div className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-primary" />
+            <span className="font-bold text-sm">Hospital Control</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={signOut}>
+            <LogOut className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="px-4 pb-4">
+          <div className="flex gap-1 overflow-x-auto">
+            {navItems.map(item => (
+              <button
+                key={item.id}
+                onClick={() => setActiveNav(item.id)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg whitespace-nowrap text-xs transition-colors ${
+                  activeNav === item.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                }`}
+              >
+                <item.icon className="w-4 h-4" />
+                <span className="hidden sm:inline">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Sidebar */}
       <aside className="w-64 border-r bg-card hidden md:block">
         <div className="p-4 border-b">
           <div className="flex items-center gap-2">
@@ -804,16 +833,16 @@ export default function HospitalDashboard() {
 
       {/* Main */}
       <main className="flex-1">
-        <header className="border-b px-6 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold">{profile?.organization_name || 'Hospital Dashboard'}</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{currentTime.toLocaleTimeString()}</span>
-            <Button variant="ghost" size="sm" onClick={signOut}>
+        <header className="border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+          <h1 className="text-lg sm:text-xl font-bold truncate">{profile?.organization_name || 'Hospital Dashboard'}</h1>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <span className="text-xs sm:text-sm text-muted-foreground hidden sm:block">{currentTime.toLocaleTimeString()}</span>
+            <Button variant="ghost" size="sm" onClick={signOut} className="hidden md:flex">
               <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </header>
-        <div className="p-6">{renderContent()}</div>
+        <div className="p-3 sm:p-4 md:p-6">{renderContent()}</div>
       </main>
     </div>
   );

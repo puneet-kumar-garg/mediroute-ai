@@ -72,10 +72,10 @@ export default function Auth() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md animate-fade-in">
         {/* Logo/Header */}
-        <div className="text-center mb-8 flex flex-col items-center">
-          <Logo size="lg" showText={false} className="mb-4" />
-          <h1 className="text-2xl font-bold text-white">MediRoute AI</h1>
-          <p className="text-slate-400 mt-1">Smart Ambulance Navigation System</p>
+        <div className="text-center mb-6 sm:mb-8 flex flex-col items-center">
+          <Logo size="lg" showText={false} className="mb-3 sm:mb-4" />
+          <h1 className="text-xl sm:text-2xl font-bold text-white">MediRoute AI</h1>
+          <p className="text-slate-400 mt-1 text-sm sm:text-base">Smart Ambulance Navigation System</p>
         </div>
 
         <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700">
