@@ -115,27 +115,80 @@ export default function AdminDashboard() {
     setCreatingDriver(true);
 
     try {
-      // Use the SQL function to create confirmed driver
-      const { data, error } = await supabase.rpc('create_confirmed_driver', {
-        driver_email: newDriverEmail,
-        driver_password: newDriverPassword,
-        driver_name: newDriverName,
-        vehicle_number: newVehicleNumber || null
+      // Store the current session before creating a new user
+      const { data: currentSession } = await supabase.auth.getSession();
+      const adminSession = currentSession.session;
+
+      if (!adminSession) {
+        throw new Error('Admin session not found');
+      }
+
+      // Create the user account
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newDriverEmail,
+        password: newDriverPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: newDriverName,
+            role: 'ambulance',
+          },
+        },
       });
 
-      if (error) throw error;
+      if (authError) throw authError;
 
-      toast({
-        title: 'Driver Created',
-        description: `${newDriverName} can now login immediately with ${newDriverEmail}`,
+      // IMMEDIATELY restore admin session to prevent redirect
+      await supabase.auth.setSession({
+        access_token: adminSession.access_token,
+        refresh_token: adminSession.refresh_token,
       });
 
-      setDialogOpen(false);
-      setNewDriverEmail('');
-      setNewDriverPassword('');
-      setNewDriverName('');
-      setNewVehicleNumber('');
-      fetchData();
+      if (authData.user) {
+        // Wait a moment for the trigger to create the profile
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Update the profile to be approved (as admin)
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ is_approved: true })
+          .eq('id', authData.user.id);
+
+        if (updateError) {
+          console.error('Error approving driver:', updateError);
+        }
+
+        // Create ambulance if vehicle number provided
+        if (newVehicleNumber) {
+          const { error: ambulanceError } = await supabase
+            .from('ambulances')
+            .insert({
+              driver_id: authData.user.id,
+              vehicle_number: newVehicleNumber,
+              current_lat: 0,
+              current_lng: 0,
+              heading: 0,
+              speed: 0,
+              emergency_status: 'inactive',
+            });
+
+          if (ambulanceError) {
+            console.error('Error creating ambulance:', ambulanceError);
+          }
+        }
+
+        toast({
+          title: 'Driver Created',
+          description: `Account for ${newDriverName} has been created and approved.`,
+        });
+
+        setDialogOpen(false);
+        setNewDriverEmail('');
+        setNewDriverPassword('');
+        setNewDriverName('');
+        setNewVehicleNumber('');
+        fetchData();
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
