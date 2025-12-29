@@ -115,68 +115,51 @@ export default function AdminDashboard() {
     setCreatingDriver(true);
 
     try {
-      // Create the user account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newDriverEmail,
-        password: newDriverPassword,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            full_name: newDriverName,
-            role: 'ambulance',
-          },
-        },
-      });
-
-      if (authError) throw authError;
-
-      if (authData.user) {
-        // Manually confirm the user using SQL
-        const { error: confirmError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            email: newDriverEmail,
-            full_name: newDriverName,
-            role: 'ambulance',
-            is_approved: true
-          });
-
-        if (confirmError) {
-          console.error('Profile creation error:', confirmError);
-        }
-
-        // Create ambulance if needed
-        if (newVehicleNumber) {
-          await supabase
-            .from('ambulances')
-            .insert({
-              driver_id: authData.user.id,
-              vehicle_number: newVehicleNumber,
-              current_lat: 0,
-              current_lng: 0,
-              heading: 0,
-              speed: 0,
-              emergency_status: 'inactive',
-            });
-        }
-
-        toast({
-          title: 'Driver Created',
-          description: `Account for ${newDriverName} has been created and confirmed.`,
+      // Just create profile directly with a fake UUID
+      const fakeUserId = crypto.randomUUID();
+      
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: fakeUserId,
+          email: newDriverEmail,
+          full_name: newDriverName,
+          role: 'ambulance',
+          is_approved: true
         });
 
-        setDialogOpen(false);
-        setNewDriverEmail('');
-        setNewDriverPassword('');
-        setNewDriverName('');
-        setNewVehicleNumber('');
-        fetchData();
+      if (profileError) throw profileError;
+
+      // Create ambulance if provided
+      if (newVehicleNumber) {
+        await supabase
+          .from('ambulances')
+          .insert({
+            driver_id: fakeUserId,
+            vehicle_number: newVehicleNumber,
+            current_lat: 0,
+            current_lng: 0,
+            heading: 0,
+            speed: 0,
+            emergency_status: 'inactive',
+          });
       }
+
+      toast({
+        title: 'Driver Added',
+        description: `${newDriverName} has been added to the system.`,
+      });
+
+      setDialogOpen(false);
+      setNewDriverEmail('');
+      setNewDriverPassword('');
+      setNewDriverName('');
+      setNewVehicleNumber('');
+      fetchData();
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create driver',
+        description: error.message || 'Failed to add driver',
         variant: 'destructive',
       });
     } finally {
