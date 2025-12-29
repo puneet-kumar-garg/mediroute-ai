@@ -146,9 +146,6 @@ export default function AdminDashboard() {
           console.error('Profile creation error:', confirmError);
         }
 
-        // Confirm user via direct SQL
-        await supabase.sql`UPDATE auth.users SET email_confirmed_at = NOW() WHERE id = ${authData.user.id}`;
-
         // Create ambulance if needed
         if (newVehicleNumber) {
           await supabase
