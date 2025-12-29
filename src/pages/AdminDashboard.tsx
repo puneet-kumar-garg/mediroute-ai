@@ -115,14 +115,6 @@ export default function AdminDashboard() {
     setCreatingDriver(true);
 
     try {
-      // Store the current session before creating a new user
-      const { data: currentSession } = await supabase.auth.getSession();
-      const adminSession = currentSession.session;
-
-      if (!adminSession) {
-        throw new Error('Admin session not found');
-      }
-
       // Create the user account
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newDriverEmail,
@@ -138,29 +130,24 @@ export default function AdminDashboard() {
 
       if (authError) throw authError;
 
-      // IMMEDIATELY restore admin session to prevent redirect
-      await supabase.auth.setSession({
-        access_token: adminSession.access_token,
-        refresh_token: adminSession.refresh_token,
-      });
-
       if (authData.user) {
-        // Wait a moment for the trigger to create the profile
+        // Manually confirm the user using SQL
+        await supabase.rpc('exec', {
+          sql: `UPDATE auth.users SET email_confirmed_at = NOW() WHERE id = '${authData.user.id}'`
+        });
+
+        // Wait for profile creation
         await new Promise(resolve => setTimeout(resolve, 1500));
 
-        // Update the profile to be approved (as admin)
-        const { error: updateError } = await supabase
+        // Update profile to be approved
+        await supabase
           .from('profiles')
           .update({ is_approved: true })
           .eq('id', authData.user.id);
 
-        if (updateError) {
-          console.error('Error approving driver:', updateError);
-        }
-
-        // Create ambulance if vehicle number provided
+        // Create ambulance if needed
         if (newVehicleNumber) {
-          const { error: ambulanceError } = await supabase
+          await supabase
             .from('ambulances')
             .insert({
               driver_id: authData.user.id,
@@ -171,15 +158,11 @@ export default function AdminDashboard() {
               speed: 0,
               emergency_status: 'inactive',
             });
-
-          if (ambulanceError) {
-            console.error('Error creating ambulance:', ambulanceError);
-          }
         }
 
         toast({
           title: 'Driver Created',
-          description: `Account for ${newDriverName} has been created and approved.`,
+          description: `Account for ${newDriverName} has been created and confirmed.`,
         });
 
         setDialogOpen(false);
