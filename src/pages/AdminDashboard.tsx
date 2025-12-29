@@ -115,52 +115,19 @@ export default function AdminDashboard() {
     setCreatingDriver(true);
 
     try {
-      // Create auth user first
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newDriverEmail,
-        password: newDriverPassword
+      // Use the SQL function to create confirmed driver
+      const { data, error } = await supabase.rpc('create_confirmed_driver', {
+        driver_email: newDriverEmail,
+        driver_password: newDriverPassword,
+        driver_name: newDriverName,
+        vehicle_number: newVehicleNumber || null
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('User creation failed');
-
-      // Create profile record
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          email: newDriverEmail,
-          full_name: newDriverName,
-          role: 'ambulance',
-          is_approved: true
-        });
-
-      if (profileError) throw profileError;
-
-      // Confirm user manually
-      await supabase
-        .from('profiles')
-        .update({ email: newDriverEmail })
-        .eq('id', authData.user.id);
-
-      // Create ambulance if provided
-      if (newVehicleNumber) {
-        await supabase
-          .from('ambulances')
-          .insert({
-            driver_id: authData.user.id,
-            vehicle_number: newVehicleNumber,
-            current_lat: 0,
-            current_lng: 0,
-            heading: 0,
-            speed: 0,
-            emergency_status: 'inactive',
-          });
-      }
+      if (error) throw error;
 
       toast({
         title: 'Driver Created',
-        description: `${newDriverName} can now login with ${newDriverEmail}`,
+        description: `${newDriverName} can now login immediately with ${newDriverEmail}`,
       });
 
       setDialogOpen(false);
