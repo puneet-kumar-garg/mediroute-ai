@@ -132,18 +132,22 @@ export default function AdminDashboard() {
 
       if (authData.user) {
         // Manually confirm the user using SQL
-        await supabase.rpc('exec', {
-          sql: `UPDATE auth.users SET email_confirmed_at = NOW() WHERE id = '${authData.user.id}'`
-        });
-
-        // Wait for profile creation
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Update profile to be approved
-        await supabase
+        const { error: confirmError } = await supabase
           .from('profiles')
-          .update({ is_approved: true })
-          .eq('id', authData.user.id);
+          .insert({
+            id: authData.user.id,
+            email: newDriverEmail,
+            full_name: newDriverName,
+            role: 'ambulance',
+            is_approved: true
+          });
+
+        if (confirmError) {
+          console.error('Profile creation error:', confirmError);
+        }
+
+        // Confirm user via direct SQL
+        await supabase.sql`UPDATE auth.users SET email_confirmed_at = NOW() WHERE id = ${authData.user.id}`;
 
         // Create ambulance if needed
         if (newVehicleNumber) {
