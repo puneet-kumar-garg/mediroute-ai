@@ -115,13 +115,20 @@ export default function AdminDashboard() {
     setCreatingDriver(true);
 
     try {
-      // Just create profile directly with a fake UUID
-      const fakeUserId = crypto.randomUUID();
-      
+      // Create auth user first
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newDriverEmail,
+        password: newDriverPassword
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('User creation failed');
+
+      // Create profile record
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
-          id: fakeUserId,
+          id: authData.user.id,
           email: newDriverEmail,
           full_name: newDriverName,
           role: 'ambulance',
@@ -130,12 +137,18 @@ export default function AdminDashboard() {
 
       if (profileError) throw profileError;
 
+      // Confirm user manually
+      await supabase
+        .from('profiles')
+        .update({ email: newDriverEmail })
+        .eq('id', authData.user.id);
+
       // Create ambulance if provided
       if (newVehicleNumber) {
         await supabase
           .from('ambulances')
           .insert({
-            driver_id: fakeUserId,
+            driver_id: authData.user.id,
             vehicle_number: newVehicleNumber,
             current_lat: 0,
             current_lng: 0,
@@ -146,8 +159,8 @@ export default function AdminDashboard() {
       }
 
       toast({
-        title: 'Driver Added',
-        description: `${newDriverName} has been added to the system.`,
+        title: 'Driver Created',
+        description: `${newDriverName} can now login with ${newDriverEmail}`,
       });
 
       setDialogOpen(false);
@@ -159,7 +172,7 @@ export default function AdminDashboard() {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to add driver',
+        description: error.message || 'Failed to create driver',
         variant: 'destructive',
       });
     } finally {
