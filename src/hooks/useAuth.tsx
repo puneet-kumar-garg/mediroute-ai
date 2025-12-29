@@ -54,7 +54,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
-      console.log('Fetching profile for user:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -63,11 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Error fetching profile:', error);
-        console.log('Profile fetch failed - user may not have profile record');
         return;
       }
 
-      console.log('Profile fetched successfully:', data);
       setProfile(data as Profile);
     } catch (error) {
       console.error('Error fetching profile:', error);
