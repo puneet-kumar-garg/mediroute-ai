@@ -4,7 +4,7 @@ A real-time ambulance tracking and traffic signal priority system that helps sav
 
 ## 🏗️ System Architecture
 
-![System Architecture](docs/system-architecture.md)
+![System Architecture](docs/system-architecture.png)
 
 The MediRoute AI system consists of interconnected components:
 
@@ -19,7 +19,7 @@ The MediRoute AI system consists of interconnected components:
 
 ## 🔄 Emergency Workflow
 
-![Emergency Workflow](docs/emergency-workflow.md)
+![Emergency Workflow](docs/emergency-workflow.png)
 
 The emergency response follows a streamlined process:
 
