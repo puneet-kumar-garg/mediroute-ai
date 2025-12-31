@@ -413,61 +413,75 @@ export default function AmbulanceDashboard() {
               </div>
 
               {/* Route Navigation Buttons - Always show when routes are available */}
-              {activeToken.route_to_patient && (
-                <div className={`p-3 rounded-lg mb-4 ${
-                  isGoingToHospital ? 'bg-muted/50 border border-border' : 'bg-blue-500/10 border border-blue-500/30'
-                }`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Route className={`w-5 h-5 ${isGoingToHospital ? 'text-muted-foreground' : 'text-blue-500'}`} />
-                      <span className="font-medium">Route to Patient</span>
-                      {(isAtPatient || isGoingToHospital) && (
-                        <Badge variant="outline" className="text-green-600 text-xs">✓ Completed</Badge>
-                      )}
+              <div className="space-y-3 mb-4">
+                {activeToken.route_to_patient && (
+                  <div className={`p-4 rounded-lg border-2 ${
+                    isGoingToHospital ? 'bg-muted/30 border-muted' : 'bg-blue-50 border-blue-200'
+                  }`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Route className={`w-5 h-5 ${isGoingToHospital ? 'text-muted-foreground' : 'text-blue-600'}`} />
+                        <div>
+                          <span className="font-semibold text-base">Route to Patient</span>
+                          {(isAtPatient || isGoingToHospital) && (
+                            <Badge variant="outline" className="ml-2 text-green-600 text-xs">✓ Completed</Badge>
+                          )}
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {activeToken.pickup_address || `${activeToken.pickup_lat.toFixed(4)}, ${activeToken.pickup_lng.toFixed(4)}`}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="default"
+                        size="lg"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold min-w-[180px]"
+                        onClick={() => openGoogleMaps(
+                          activeToken.route_to_patient,
+                          { lat: activeToken.ambulance_origin_lat || ambulance?.current_lat || 0, lng: activeToken.ambulance_origin_lng || ambulance?.current_lng || 0 },
+                          { lat: activeToken.pickup_lat, lng: activeToken.pickup_lng }
+                        )}
+                      >
+                        <ExternalLink className="w-5 h-5 mr-2" />
+                        Navigate to Patient
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openGoogleMaps(
-                        activeToken.route_to_patient,
-                        { lat: activeToken.ambulance_origin_lat || ambulance?.current_lat || 0, lng: activeToken.ambulance_origin_lng || ambulance?.current_lng || 0 },
-                        { lat: activeToken.pickup_lat, lng: activeToken.pickup_lng }
-                      )}
-                    >
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      Open in Google Maps
-                    </Button>
                   </div>
-                </div>
-              )}
+                )}
 
-              {activeToken.route_to_hospital && (
-                <div className={`p-3 rounded-lg mb-4 ${
-                  isGoingToHospital ? 'bg-green-500/10 border border-green-500/30' : 'bg-muted/50 border border-border'
-                }`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Route className={`w-5 h-5 ${isGoingToHospital ? 'text-green-500' : 'text-muted-foreground'}`} />
-                      <span className="font-medium">Route to Hospital</span>
-                      {!isGoingToHospital && !isAtPatient && (
-                        <Badge variant="outline" className="text-muted-foreground text-xs">Upcoming</Badge>
-                      )}
+                {activeToken.route_to_hospital && (
+                  <div className={`p-4 rounded-lg border-2 ${
+                    isGoingToHospital ? 'bg-green-50 border-green-200' : 'bg-muted/30 border-muted'
+                  }`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Route className={`w-5 h-5 ${isGoingToHospital ? 'text-green-600' : 'text-muted-foreground'}`} />
+                        <div>
+                          <span className="font-semibold text-base">Route to Hospital</span>
+                          {!isGoingToHospital && !isAtPatient && (
+                            <Badge variant="outline" className="ml-2 text-muted-foreground text-xs">Upcoming</Badge>
+                          )}
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {activeToken.hospital_name || 'Hospital'}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="default"
+                        size="lg"
+                        className="bg-green-600 hover:bg-green-700 text-white font-semibold min-w-[180px]"
+                        onClick={() => openGoogleMaps(
+                          activeToken.route_to_hospital,
+                          { lat: activeToken.pickup_lat, lng: activeToken.pickup_lng },
+                          { lat: activeToken.hospital_lat || 0, lng: activeToken.hospital_lng || 0 }
+                        )}
+                      >
+                        <ExternalLink className="w-5 h-5 mr-2" />
+                        Navigate to Hospital
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openGoogleMaps(
-                        activeToken.route_to_hospital,
-                        { lat: activeToken.pickup_lat, lng: activeToken.pickup_lng },
-                        { lat: activeToken.hospital_lat || 0, lng: activeToken.hospital_lng || 0 }
-                      )}
-                    >
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      Open in Google Maps
-                    </Button>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
