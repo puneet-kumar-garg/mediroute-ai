@@ -668,8 +668,8 @@ export default function HospitalDashboard() {
               <CardContent className="p-0">
                 <div className="h-[calc(100vh-200px)] rounded-xl overflow-hidden">
                   <Map 
-                    center={[30.7333, 76.7794]}
-                    zoom={12}
+                    center={[27.5, 76.0]}
+                    zoom={5}
                     markers={[
                       // Hospital markers
                       ...hospitals.map(h => ({
