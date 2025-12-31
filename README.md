@@ -2,6 +2,34 @@
 
 A real-time ambulance tracking and traffic signal priority system that helps save lives by ensuring clear routes for emergency vehicles.
 
+## 🏗️ System Architecture
+
+![System Architecture](docs/system-architecture.md)
+
+The MediRoute AI system consists of interconnected components:
+
+- **CityAdmin**: Manages ambulance registration and fleet oversight
+- **AdminServer**: Handles authentication and verification processes  
+- **Ambulance**: Real-time GPS tracking and emergency response
+- **Hospital**: Emergency management and route coordination
+- **MediRouteAI Core**: Route optimization and traffic control system
+- **MapEngine**: Route calculation and navigation services
+- **TrafficControl**: Automated traffic signal management
+- **TrafficSignals**: Physical traffic infrastructure integration
+
+## 🔄 Emergency Workflow
+
+![Emergency Workflow](docs/emergency-workflow.md)
+
+The emergency response follows a streamlined process:
+
+1. **Emergency Initiation** - Patient calls hospital or emergency services
+2. **Hospital Response** - Verifies emergency and assigns nearest ambulance
+3. **Route Calculation** - AI calculates optimal route considering traffic
+4. **Green Corridor Activation** - Automatic traffic signal priority
+5. **Live Tracking** - Real-time updates to hospital and patient
+6. **Emergency Completion** - Arrival confirmation and system reset
+
 ## 🚑 Features
 
 - **Real-time GPS Tracking** - Live location tracking of ambulances with accurate positioning
@@ -157,12 +185,37 @@ The system uses Supabase Auth with role-based access control:
 
 ## 🚨 Emergency Workflow
 
-1. **Emergency Request** - Hospital creates emergency token
-2. **Ambulance Dispatch** - Driver accepts emergency
-3. **Route Optimization** - System calculates optimal route
-4. **Traffic Priority** - Signals automatically adjust
-5. **Real-time Updates** - Hospital receives live ETA
-6. **Arrival Notification** - System confirms ambulance arrival
+The system follows an intelligent emergency response process:
+
+### Phase 1: Emergency Initiation
+- Patient calls hospital or directly contacts emergency services
+- Hospital staff verify the emergency and assess severity
+- System identifies nearest available ambulance
+
+### Phase 2: Route Optimization
+- MediRoute AI calculates optimal route using real-time traffic data
+- Multiple route options generated considering:
+  - Current traffic conditions
+  - Road closures and construction
+  - Hospital capacity and specialization
+  - Ambulance location and availability
+
+### Phase 3: Green Corridor Activation
+- Traffic signals along the route automatically receive priority commands
+- Signals turn green in sequence as ambulance approaches
+- Real-time coordination with traffic management systems
+
+### Phase 4: Live Tracking & Updates
+- Continuous GPS tracking of ambulance location
+- Real-time ETA updates sent to hospital
+- Patient/family notifications with progress updates
+- Route adjustments based on changing conditions
+
+### Phase 5: Completion & Reset
+- System confirms ambulance arrival at hospital
+- Traffic signals return to normal operation
+- Emergency token marked as completed
+- Performance metrics logged for analysis
 
 ## 🤝 Contributing
 
