@@ -1,5 +1,11 @@
 # MediRoute AI - Smart Ambulance Navigation System
 
+## 🌐 Live Website
+👉 https://medirouteai.vercel.app
+
+## 🎥 Project Demo Video
+👉 https://drive.google.com/drive/folders/1SaYn1xqYD6Y-XTptdFiBdox-okxGlThD?usp=sharing
+
 A real-time ambulance tracking and traffic signal priority system that helps save lives by ensuring clear routes for emergency vehicles.
 
 ## 🏗️ System Architecture
