@@ -247,4 +247,4 @@ For support, email support@mediroute.ai or create an issue in this repository.
 
 ---
 
-**MediRoute AI** - Saving lives through smart technology 🚑💙
+**MediRoute AI** - Saving lives through smart technology 🚑
