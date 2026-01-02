@@ -7,7 +7,8 @@ import { useEmergencyTokens } from '@/hooks/useEmergencyTokens';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, MapPin, Navigation, LogOut, Power, Radio, Ticket, Play, CheckCircle, X, Route, ExternalLink, User, Building2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertTriangle, MapPin, Navigation, LogOut, Power, Radio, Ticket, Play, CheckCircle, X, Route, ExternalLink, User, Building2, Locate } from 'lucide-react';
 import Map from '@/components/Map';
 import LocationPicker from '@/components/LocationPicker';
 import TrafficSignalStatusPanel from '@/components/TrafficSignalStatusPanel';
@@ -35,6 +36,10 @@ export default function AmbulanceDashboard() {
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [pickupLocation, setPickupLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
   const [isCreatingToken, setIsCreatingToken] = useState(false);
+  
+  // Location sharing state
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   // Auth redirect
   useEffect(() => {
@@ -217,6 +222,46 @@ export default function AmbulanceDashboard() {
     if (success) {
       toast.info('Emergency Cancelled');
     }
+  };
+
+  const handleMyLocationClick = () => {
+    setShowLocationDialog(true);
+  };
+
+  const handleShareLocation = () => {
+    if (!('geolocation' in navigator)) {
+      toast.error('Geolocation is not supported by this browser');
+      return;
+    }
+
+    setIsGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        updateLocation(latitude, longitude, 0, 0);
+        toast.success('Location updated successfully!');
+        setShowLocationDialog(false);
+        setIsGettingLocation(false);
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        let errorMessage = 'Failed to get location';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location access denied. Please enable location permissions.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information unavailable.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out.';
+            break;
+        }
+        toast.error(errorMessage);
+        setIsGettingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
   };
 
   const openGoogleMaps = (route: { coordinates: [number, number][] } | null, origin: { lat: number; lng: number }, destination: { lat: number; lng: number }) => {
@@ -591,9 +636,52 @@ export default function AmbulanceDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <MapPin className="w-5 h-5" />
-                Current Location
+              <CardTitle className="flex items-center justify-between text-lg">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5" />
+                  Current Location
+                </div>
+                <Dialog open={showLocationDialog} onOpenChange={setShowLocationDialog}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleMyLocationClick}
+                      className="text-xs sm:text-sm"
+                    >
+                      <Locate className="w-4 h-4 mr-1" />
+                      My Location
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Locate className="w-5 h-5" />
+                        Share Your Location
+                      </DialogTitle>
+                      <DialogDescription>
+                        Allow MediRoute AI to access your current location to update your ambulance position for accurate tracking and navigation.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col gap-3 pt-4">
+                      <Button
+                        onClick={handleShareLocation}
+                        disabled={isGettingLocation}
+                        className="w-full"
+                      >
+                        <Locate className="w-4 h-4 mr-2" />
+                        {isGettingLocation ? 'Getting Location...' : 'Share Location'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowLocationDialog(false)}
+                        className="w-full"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
