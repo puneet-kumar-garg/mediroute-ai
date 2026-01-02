@@ -1,5 +1,11 @@
 # MediRoute AI - Smart Ambulance Navigation System
 
+## 🌐 Live Website
+👉 https://medirouteai.vercel.app
+
+## 🎥 Project Demo Video
+👉 https://drive.google.com/drive/folders/1SaYn1xqYD6Y-XTptdFiBdox-okxGlThD?usp=sharing
+
 A real-time ambulance tracking and traffic signal priority system that helps save lives by ensuring clear routes for emergency vehicles.
 
 ## 🏗️ System Architecture
@@ -229,9 +235,6 @@ The system follows an intelligent emergency response process:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
-
-For support, email support@mediroute.ai or create an issue in this repository.
 
 ## 🙏 Acknowledgments
 
@@ -241,4 +244,4 @@ For support, email support@mediroute.ai or create an issue in this repository.
 
 ---
 
-**MediRoute AI** - Saving lives through smart technology 🚑💙
+**MediRoute AI** - Saving lives through smart technology 🚑
