@@ -13,6 +13,28 @@ import LocationPicker from '@/components/LocationPicker';
 import TrafficSignalStatusPanel from '@/components/TrafficSignalStatusPanel';
 import { toast } from 'sonner';
 
+export interface VehicleHealth {
+  fuel_percent: number;
+  battery_percent: number;
+  oxygen_percent: number;
+  tyres: {
+    front_left: number;
+    front_right: number;
+    rear_left: number;
+    rear_right: number;
+  };
+}
+
+export interface Ambulance {
+  id: string;
+  vehicle_number: string;
+  current_lat: number;
+  current_lng: number;
+  speed: number;
+  heading: number;
+  vehicle_health: VehicleHealth;
+}
+
 export default function AmbulanceDashboard() {
   const navigate = useNavigate();
   const { user, profile, loading: authLoading, signOut } = useAuth();
