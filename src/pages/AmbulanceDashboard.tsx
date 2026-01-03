@@ -7,8 +7,7 @@ import { useEmergencyTokens } from '@/hooks/useEmergencyTokens';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertTriangle, MapPin, Navigation, LogOut, Power, Radio, Ticket, Play, CheckCircle, X, Route, ExternalLink, User, Building2, Locate } from 'lucide-react';
+import { AlertTriangle, MapPin, Navigation, LogOut, Power, Radio, Ticket, Play, CheckCircle, X, Route, ExternalLink, User, Building2 } from 'lucide-react';
 import Map from '@/components/Map';
 import LocationPicker from '@/components/LocationPicker';
 import TrafficSignalStatusPanel from '@/components/TrafficSignalStatusPanel';
@@ -19,6 +18,7 @@ export default function AmbulanceDashboard() {
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const { ambulance, loading: ambLoading, updateLocation, isSimulating, startSimulation, stopSimulation } = useAmbulance();
   const { signals, checkSignalsForAmbulance } = useTrafficSignals();
+  
   const { 
     activeToken, 
     createToken,
@@ -36,10 +36,6 @@ export default function AmbulanceDashboard() {
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [pickupLocation, setPickupLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
   const [isCreatingToken, setIsCreatingToken] = useState(false);
-  
-  // Location sharing state
-  const [showLocationDialog, setShowLocationDialog] = useState(false);
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   // Auth redirect
   useEffect(() => {
@@ -224,46 +220,6 @@ export default function AmbulanceDashboard() {
     }
   };
 
-  const handleMyLocationClick = () => {
-    setShowLocationDialog(true);
-  };
-
-  const handleShareLocation = () => {
-    if (!('geolocation' in navigator)) {
-      toast.error('Geolocation is not supported by this browser');
-      return;
-    }
-
-    setIsGettingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        updateLocation(latitude, longitude, 0, 0);
-        toast.success('Location updated successfully!');
-        setShowLocationDialog(false);
-        setIsGettingLocation(false);
-      },
-      (error) => {
-        console.error('Geolocation error:', error);
-        let errorMessage = 'Failed to get location';
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = 'Location access denied. Please enable location permissions.';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = 'Location information unavailable.';
-            break;
-          case error.TIMEOUT:
-            errorMessage = 'Location request timed out.';
-            break;
-        }
-        toast.error(errorMessage);
-        setIsGettingLocation(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    );
-  };
-
   const openGoogleMaps = (route: { coordinates: [number, number][] } | null, origin: { lat: number; lng: number }, destination: { lat: number; lng: number }) => {
     if (!route?.coordinates?.length) return;
     
@@ -299,6 +255,14 @@ export default function AmbulanceDashboard() {
   const isGoingToPatient = activeToken?.status === 'in_progress';
   const isAtPatient = activeToken?.status === 'at_patient';
   const isGoingToHospital = activeToken?.status === 'to_hospital';
+  const showNavToPatient =
+  activeToken?.status === 'route_selected' ||
+  activeToken?.status === 'in_progress';
+
+  const showNavToHospital =
+  activeToken?.status === 'at_patient' ||
+  activeToken?.status === 'to_hospital';
+
 
   // Get current route based on status - show route whenever available
   const getCurrentRoute = () => {
@@ -458,75 +422,61 @@ export default function AmbulanceDashboard() {
               </div>
 
               {/* Route Navigation Buttons - Always show when routes are available */}
-              <div className="space-y-3 mb-4">
-                {activeToken.route_to_patient && (
-                  <div className={`p-4 rounded-lg border-2 ${
-                    isGoingToHospital ? 'bg-muted/30 border-muted' : 'bg-blue-50 border-blue-200'
-                  }`}>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <Route className={`w-5 h-5 ${isGoingToHospital ? 'text-muted-foreground' : 'text-blue-600'}`} />
-                        <div>
-                          <span className="font-semibold text-base">Route to Patient</span>
-                          {(isAtPatient || isGoingToHospital) && (
-                            <Badge variant="outline" className="ml-2 text-green-600 text-xs">✓ Completed</Badge>
-                          )}
-                          <div className="text-sm text-muted-foreground mt-1">
-                            {activeToken.pickup_address || `${activeToken.pickup_lat.toFixed(4)}, ${activeToken.pickup_lng.toFixed(4)}`}
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        variant="default"
-                        size="lg"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold min-w-[180px]"
-                        onClick={() => openGoogleMaps(
-                          activeToken.route_to_patient,
-                          { lat: activeToken.ambulance_origin_lat || ambulance?.current_lat || 0, lng: activeToken.ambulance_origin_lng || ambulance?.current_lng || 0 },
-                          { lat: activeToken.pickup_lat, lng: activeToken.pickup_lng }
-                        )}
-                      >
-                        <ExternalLink className="w-5 h-5 mr-2" />
-                        Navigate to Patient
-                      </Button>
-                    </div>
-                  </div>
-                )}
+               <div className="space-y-3 mb-4">
 
-                {activeToken.route_to_hospital && (
-                  <div className={`p-4 rounded-lg border-2 ${
-                    isGoingToHospital ? 'bg-green-50 border-green-200' : 'bg-muted/30 border-muted'
-                  }`}>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <Route className={`w-5 h-5 ${isGoingToHospital ? 'text-green-600' : 'text-muted-foreground'}`} />
-                        <div>
-                          <span className="font-semibold text-base">Route to Hospital</span>
-                          {!isGoingToHospital && !isAtPatient && (
-                            <Badge variant="outline" className="ml-2 text-muted-foreground text-xs">Upcoming</Badge>
-                          )}
-                          <div className="text-sm text-muted-foreground mt-1">
-                            {activeToken.hospital_name || 'Hospital'}
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        variant="default"
-                        size="lg"
-                        className="bg-green-600 hover:bg-green-700 text-white font-semibold min-w-[180px]"
-                        onClick={() => openGoogleMaps(
-                          activeToken.route_to_hospital,
-                          { lat: activeToken.pickup_lat, lng: activeToken.pickup_lng },
-                          { lat: activeToken.hospital_lat || 0, lng: activeToken.hospital_lng || 0 }
-                        )}
-                      >
-                        <ExternalLink className="w-5 h-5 mr-2" />
-                        Navigate to Hospital
-                      </Button>
+              {/* NAVIGATE TO PATIENT */}
+              {showNavToPatient && activeToken.route_to_patient && (
+                <div className="p-4 rounded-xl border border-blue-500/30 bg-blue-500/10 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-blue-700">🚑 Route to Patient</p>
+                      <p className="text-xs text-blue-700/70">
+                        {activeToken.pickup_address}
+                      </p>
                     </div>
+
+                    <Button
+                      className="bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+                      onClick={() => openGoogleMaps(
+                        activeToken.route_to_patient,
+                        { lat: ambulance?.current_lat || 0, lng: ambulance?.current_lng || 0 },
+                        { lat: activeToken.pickup_lat, lng: activeToken.pickup_lng }
+                      )}
+                    >
+                      Navigate to Patient
+                    </Button>
                   </div>
-                )}
+                </div>
+              )}
+
+
+              {/* NAVIGATE TO HOSPITAL */}
+              {showNavToHospital && activeToken.route_to_hospital && (
+              <div className="p-4 rounded-xl border border-green-500/30 bg-green-500/10 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-green-700">🏥 Route to Hospital</p>
+                    <p className="text-xs text-green-700/70">
+                      {activeToken.hospital_name}
+                    </p>
+                  </div>
+
+                  <Button
+                    className="bg-green-600 hover:bg-green-700 text-white shadow-md"
+                    onClick={() => openGoogleMaps(
+                      activeToken.route_to_hospital,
+                      { lat: activeToken.pickup_lat, lng: activeToken.pickup_lng },
+                      { lat: activeToken.hospital_lat || 0, lng: activeToken.hospital_lng || 0 }
+                    )}
+                  >
+                    Navigate to Hospital
+                  </Button>
+                </div>
               </div>
+            )}
+
+              </div>
+
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
@@ -636,52 +586,9 @@ export default function AmbulanceDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between text-lg">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5" />
-                  Current Location
-                </div>
-                <Dialog open={showLocationDialog} onOpenChange={setShowLocationDialog}>
-                  <DialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleMyLocationClick}
-                      className="text-xs sm:text-sm"
-                    >
-                      <Locate className="w-4 h-4 mr-1" />
-                      My Location
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        <Locate className="w-5 h-5" />
-                        Share Your Location
-                      </DialogTitle>
-                      <DialogDescription>
-                        Allow MediRoute AI to access your current location to update your ambulance position for accurate tracking and navigation.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex flex-col gap-3 pt-4">
-                      <Button
-                        onClick={handleShareLocation}
-                        disabled={isGettingLocation}
-                        className="w-full"
-                      >
-                        <Locate className="w-4 h-4 mr-2" />
-                        {isGettingLocation ? 'Getting Location...' : 'Share Location'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowLocationDialog(false)}
-                        className="w-full"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <MapPin className="w-5 h-5" />
+                Current Location
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
