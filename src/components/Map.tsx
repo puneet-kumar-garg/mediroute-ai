@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Crosshair } from 'lucide-react';
+
 
 // Fix for default marker icons in Leaflet with bundlers
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -72,6 +74,16 @@ export default function Map({
   const markersRef = useRef<L.Marker[]>([]);
   const routeLayerRef = useRef<L.Polyline | null>(null);
   const initializedRef = useRef(false);
+  const locateMe = () => {
+  if (!navigator.geolocation || !mapRef.current) return;
+
+ navigator.geolocation.getCurrentPosition(pos => {
+   const lat = pos.coords.latitude;
+   const lng = pos.coords.longitude;
+
+   mapRef.current!.setView([lat, lng], 17, { animate: true });
+ });
+};
 
   // Validate and get safe center coordinates
   const getSafeCenter = (coords: [number, number] | undefined | null): [number, number] => {
@@ -191,10 +203,22 @@ export default function Map({
   }, [route]);
 
   return (
-    <div 
-      ref={mapContainer} 
-      className={`w-full h-full min-h-[300px] rounded-lg ${className}`}
-      style={{ zIndex: 0 }}
-    />
-  );
+ <div className="relative w-full h-full">
+   {/* Locate Me Button */}
+   <button
+     onClick={locateMe}
+     className="absolute top-3 right-3 z-[1000] bg-white shadow-lg rounded-full p-2 hover:bg-gray-100"
+     title="Locate Me"
+   >
+     <Crosshair size={20} className="text-red-600" />
+   </button>
+
+   <div
+     ref={mapContainer}
+     className={`w-full h-full min-h-[300px] rounded-lg ${className}`}
+     style={{ zIndex: 0 }}
+   />
+ </div>
+);
+
 }
