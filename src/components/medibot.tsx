@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-const BACKEND_URL = "http://localhost:5050";
+// Auto backend selector
+const BACKEND_URL = import.meta.env.VITE_API_URL || "https://mediroute-ai.onrender.com";
+
 
 export default function MediBot() {
   const [open, setOpen] = useState(false);
@@ -12,17 +14,17 @@ export default function MediBot() {
 
   const [messages, setMessages] = useState([
     {
-    from: "bot",
-    text: `👩‍⚕️ Hello! I am MediBot — your emergency AI nurse.
+      from: "bot",
+      text: `👩‍⚕️ Hello! I am MediBot — your emergency AI nurse.
 
-    I will:
-    • Give clear, short, and crisp instructions
-    • Use separate lines for each step
-    • Avoid long explanations
-    • Focus on immediate life-saving actions
+I will:
+• Give clear, short, and crisp instructions
+• Use separate lines for each step
+• Avoid long explanations
+• Focus on immediate life-saving actions
 
-    Describe the emergency to begin.`
-  }
+Describe the emergency to begin.`
+    }
   ]);
 
   const quickScenarios = [
@@ -57,7 +59,7 @@ export default function MediBot() {
         ...prev,
         { from: "bot", text: data.reply || "No response received." }
       ]);
-    } catch (err) {
+    } catch {
       setMessages(prev => [
         ...prev,
         {
@@ -79,23 +81,9 @@ export default function MediBot() {
         <img
           src="/medibot.png"
           alt="MediBot Assistant"
-          className="
-            w-20 h-20
-            rounded-full
-            object-cover
-            transition-transform duration-300 ease-out
-            group-hover:-translate-y-1
-          "
+          className="w-20 h-20 rounded-full object-cover transition-transform duration-300 ease-out group-hover:-translate-y-1"
         />
-
-        <span
-          className="
-            mt-1
-            text-xs
-            text-muted-foreground
-            tracking-wide
-          "
-        >
+        <span className="mt-1 text-xs text-muted-foreground tracking-wide">
           Assistant
         </span>
       </div>

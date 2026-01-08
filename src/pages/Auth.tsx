@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, ShieldAlert } from 'lucide-react';
+import { Building2, ShieldAlert, KeyRound } from 'lucide-react';
 import { UserRole } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import Logo from '@/components/Logo';
@@ -19,10 +19,8 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  // Only hospital role available for public signup - ambulance drivers are pre-registered
   const role: UserRole = 'hospital';
 
-  // Redirect if already logged in
   if (user) {
     navigate('/');
     return null;
@@ -31,47 +29,32 @@ export default function Auth() {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     const { error } = await signIn(email, password);
-
     if (error) {
-      toast({
-        title: 'Sign In Failed',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Sign In Failed', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Welcome back!', description: 'Successfully signed in.' });
       navigate('/');
     }
-
     setLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     const { error } = await signUp(email, password, fullName, role);
-
     if (error) {
-      toast({
-        title: 'Sign Up Failed',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Sign Up Failed', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Account Created!', description: 'You can now sign in.' });
       navigate('/');
     }
-
     setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md animate-fade-in">
-        {/* Logo/Header */}
         <div className="text-center mb-6 sm:mb-8 flex flex-col items-center">
           <Logo size="lg" showText={false} className="mb-3 sm:mb-4" />
           <h1 className="text-xl sm:text-2xl font-bold text-white">MediRoute AI</h1>
@@ -83,6 +66,20 @@ export default function Auth() {
             <CardTitle className="text-white">Welcome</CardTitle>
             <CardDescription className="text-slate-400">Sign in or create an account to continue</CardDescription>
           </CardHeader>
+
+          {/* 🔑 DEMO CREDENTIALS BOX (NEW) */}
+          <div className="mx-4 mb-3 p-3 rounded-lg bg-slate-700/40 border border-slate-600">
+            <div className="flex items-center gap-2 text-slate-200 mb-1">
+              <KeyRound className="w-4 h-4" />
+              <span className="font-medium">Demo Credentials</span>
+            </div>
+            <div className="text-xs text-slate-300 space-y-1">
+              <div><b>Driver:</b> manthan@gmail.com &nbsp; | &nbsp; <b>Pass:</b> Manthan123</div>
+              <div><b>Hospital Control:</b> puneet@gmail.com &nbsp; | &nbsp; <b>Pass:</b> Puneet123</div>
+              <div><b>Admin:</b> hardik@gmail.com &nbsp; | &nbsp; <b>Pass:</b> Hardik123</div>
+            </div>
+          </div>
+
           <CardContent>
             <Tabs defaultValue="signin" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-700/50">
@@ -161,7 +158,7 @@ export default function Auth() {
                       className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-primary"
                     />
                   </div>
-                  {/* Account type info - ambulance registration disabled */}
+
                   <div className="p-3 rounded-lg bg-slate-700/30 border border-slate-600">
                     <div className="flex items-center gap-2 text-slate-300">
                       <Building2 className="w-4 h-4" />
@@ -172,6 +169,7 @@ export default function Auth() {
                       Ambulance driver accounts are pre-registered by administrators only.
                     </p>
                   </div>
+
                   <Button type="submit" size="lg" className="w-full bg-primary hover:bg-primary/90 text-white" disabled={loading}>
                     {loading ? 'Creating Account...' : 'Create Account'}
                   </Button>
