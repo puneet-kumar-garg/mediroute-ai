@@ -230,11 +230,6 @@ export default function HospitalDashboard() {
           </div>
           <EmergencyDisplay 
             token={token}
-            onAssignHospital={async (hospitalId, hospitalName, hospitalLat, hospitalLng) => {
-              // This would trigger route calculation and assignment
-              toast.success(`Hospital assigned: ${hospitalName}`);
-              setSelectedTokenForDisplay(null);
-            }}
           />
         </div>
       );

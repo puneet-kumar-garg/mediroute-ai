@@ -1,23 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useHospitalSpecialties } from '@/hooks/useHospitalSpecialties';
-import { EmergencyToken } from '@/hooks/useEmergencyTokens';
+import { EmergencyToken, useEmergencyTokens } from '@/hooks/useEmergencyTokens';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, MapPin, Clock, Route, Building2, User, Navigation, Heart } from 'lucide-react';
 import Map from '@/components/Map';
+import { toast } from 'sonner';
 
 interface EmergencyDisplayProps {
   token: EmergencyToken;
-  onAssignHospital: (hospitalId: string, hospitalName: string, hospitalLat: number, hospitalLng: number) => void;
 }
 
-export default function EmergencyDisplay({ token, onAssignHospital }: EmergencyDisplayProps) {
+export default function EmergencyDisplay({ token }: EmergencyDisplayProps) {
   const { findBestHospitals } = useHospitalSpecialties();
+  const { createHospitalEmergency } = useEmergencyTokens();
   const [recommendations, setRecommendations] = useState<{
     best: any | null;
     nearest: any | null;
   }>({ best: null, nearest: null });
+  const [isAssigning, setIsAssigning] = useState(false);
 
   useEffect(() => {
     if (token.pickup_lat && token.pickup_lng) {
@@ -28,7 +30,72 @@ export default function EmergencyDisplay({ token, onAssignHospital }: EmergencyD
     }
   }, [token, findBestHospitals]);
 
-  const getEmergencyIcon = (type: string) => {
+  const handleAssignHospital = async (hospital: any, type: 'best' | 'nearest') => {
+    if (!token.ambulance_origin_lat || !token.ambulance_origin_lng) {
+      toast.error('Ambulance location not available');
+      return;
+    }
+
+    setIsAssigning(true);
+    try {
+      // Mock route calculation (in real app, use routing service)
+      const routeToPatient = {
+        coordinates: [
+          [token.ambulance_origin_lat, token.ambulance_origin_lng],
+          [token.pickup_lat, token.pickup_lng]
+        ] as [number, number][],
+        distance: hospital.distance,
+        duration: Math.floor(hospital.distance / 1000 * 60), // rough estimate
+        type: 'fastest' as const
+      };
+
+      const routeToHospital = {
+        coordinates: [
+          [token.pickup_lat, token.pickup_lng],
+          [hospital.hospital.location_lat, hospital.hospital.location_lng]
+        ] as [number, number][],
+        distance: hospital.distance,
+        duration: Math.floor(hospital.distance / 1000 * 60),
+        type: 'fastest' as const
+      };
+
+      const success = await createHospitalEmergency(
+        token.ambulance_id,
+        token.ambulance_origin_lat,
+        token.ambulance_origin_lng,
+        token.pickup_lat,
+        token.pickup_lng,
+        token.pickup_address,
+        hospital.hospital.id,
+        hospital.hospital.organization_name,
+        hospital.hospital.location_lat,
+        hospital.hospital.location_lng,
+        routeToPatient,
+        routeToHospital,
+        token.emergency_type,
+        token.medical_keyword
+      );
+
+      if (success) {
+        toast.success(`${type === 'best' ? 'Best Specialist' : 'Nearest'} Hospital Assigned!`, {
+          description: `${hospital.hospital.organization_name} - Routes calculated`
+        });
+      } else {
+        toast.error('Failed to assign hospital');
+      }
+    } catch (error) {
+      console.error('Error assigning hospital:', error);
+      toast.error('Failed to assign hospital');
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const formatDistance = (meters: number) => (meters / 1000).toFixed(1) + ' km';
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    return mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  };
     const icons: Record<string, string> = {
       'Cardiac Emergency (Heart Attack)': '❤️',
       'Accident / Trauma': '🚗',
@@ -42,10 +109,65 @@ export default function EmergencyDisplay({ token, onAssignHospital }: EmergencyD
     return icons[type] || '🚨';
   };
 
-  const formatDistance = (meters: number) => (meters / 1000).toFixed(1) + ' km';
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    return mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  const handleAssignHospital = async (hospital: any, type: 'best' | 'nearest') => {
+    if (!token.ambulance_origin_lat || !token.ambulance_origin_lng) {
+      toast.error('Ambulance location not available');
+      return;
+    }
+
+    setIsAssigning(true);
+    try {
+      // Mock route calculation (in real app, use routing service)
+      const routeToPatient = {
+        coordinates: [
+          [token.ambulance_origin_lat, token.ambulance_origin_lng],
+          [token.pickup_lat, token.pickup_lng]
+        ] as [number, number][],
+        distance: hospital.distance,
+        duration: Math.floor(hospital.distance / 1000 * 60), // rough estimate
+        type: 'fastest' as const
+      };
+
+      const routeToHospital = {
+        coordinates: [
+          [token.pickup_lat, token.pickup_lng],
+          [hospital.hospital.location_lat, hospital.hospital.location_lng]
+        ] as [number, number][],
+        distance: hospital.distance,
+        duration: Math.floor(hospital.distance / 1000 * 60),
+        type: 'fastest' as const
+      };
+
+      const success = await createHospitalEmergency(
+        token.ambulance_id,
+        token.ambulance_origin_lat,
+        token.ambulance_origin_lng,
+        token.pickup_lat,
+        token.pickup_lng,
+        token.pickup_address,
+        hospital.hospital.id,
+        hospital.hospital.organization_name,
+        hospital.hospital.location_lat,
+        hospital.hospital.location_lng,
+        routeToPatient,
+        routeToHospital,
+        token.emergency_type,
+        token.medical_keyword
+      );
+
+      if (success) {
+        toast.success(`${type === 'best' ? 'Best Specialist' : 'Nearest'} Hospital Assigned!`, {
+          description: `${hospital.hospital.organization_name} - Routes calculated`
+        });
+      } else {
+        toast.error('Failed to assign hospital');
+      }
+    } catch (error) {
+      console.error('Error assigning hospital:', error);
+      toast.error('Failed to assign hospital');
+    } finally {
+      setIsAssigning(false);
+    }
   };
 
   return (
@@ -122,15 +244,11 @@ export default function EmergencyDisplay({ token, onAssignHospital }: EmergencyD
 
                 <Button 
                   className="w-full bg-green-600 hover:bg-green-700"
-                  onClick={() => onAssignHospital(
-                    recommendations.best.hospital.id,
-                    recommendations.best.hospital.organization_name,
-                    recommendations.best.hospital.location_lat,
-                    recommendations.best.hospital.location_lng
-                  )}
+                  disabled={isAssigning}
+                  onClick={() => handleAssignHospital(recommendations.best, 'best')}
                 >
                   <Heart className="w-4 h-4 mr-2" />
-                  Assign Best Hospital
+                  {isAssigning ? 'Assigning...' : 'Assign Best Hospital'}
                 </Button>
               </>
             ) : (
@@ -185,15 +303,11 @@ export default function EmergencyDisplay({ token, onAssignHospital }: EmergencyD
                 <Button 
                   variant="outline"
                   className="w-full border-blue-500 text-blue-600 hover:bg-blue-50"
-                  onClick={() => onAssignHospital(
-                    recommendations.nearest.hospital.id,
-                    recommendations.nearest.hospital.organization_name,
-                    recommendations.nearest.hospital.location_lat,
-                    recommendations.nearest.hospital.location_lng
-                  )}
+                  disabled={isAssigning}
+                  onClick={() => handleAssignHospital(recommendations.nearest, 'nearest')}
                 >
                   <Clock className="w-4 h-4 mr-2" />
-                  Assign Nearest Hospital
+                  {isAssigning ? 'Assigning...' : 'Assign Nearest Hospital'}
                 </Button>
               </>
             ) : (
