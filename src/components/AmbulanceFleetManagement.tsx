@@ -310,7 +310,7 @@ export default function AmbulanceFleetManagement() {
                       <User className="w-5 h-5 text-slate-400" />
                       <div>
                         <p className="text-slate-400 text-sm">Driver</p>
-                        <p className="text-white font-medium">{selectedAmbulance.driver_name || 'Not assigned'}</p>
+                        <p className="text-white font-medium">{selectedAmbulance.driver_name || 'Driver not assigned'}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -435,7 +435,9 @@ export default function AmbulanceFleetManagement() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-slate-400" />
-                    <span className="text-slate-300 text-sm">{ambulance.driver_name || 'No driver assigned'}</span>
+                    <span className="text-slate-300 text-sm">
+                      {ambulance.driver_name || 'Driver not assigned'}
+                    </span>
                   </div>
                   
                   <div className="flex items-center gap-2">

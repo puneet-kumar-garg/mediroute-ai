@@ -7,9 +7,10 @@ import { useEmergencyTokens } from '@/hooks/useEmergencyTokens';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, MapPin, Navigation, LogOut, Power, Radio, Ticket, Play, CheckCircle, X, Route, ExternalLink, User, Building2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertTriangle, MapPin, Navigation, LogOut, Power, Radio, Ticket, Play, CheckCircle, X, Route, ExternalLink, User, Building2, Heart } from 'lucide-react';
 import Map from '@/components/Map';
-import LocationPicker from '@/components/LocationPicker';
 import TrafficSignalStatusPanel from '@/components/TrafficSignalStatusPanel';
 import { toast } from 'sonner';
 import MediBot from "@/components/medibot";
@@ -59,7 +60,21 @@ export default function AmbulanceDashboard() {
   // Emergency creation state
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [pickupLocation, setPickupLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
+  const [emergencyType, setEmergencyType] = useState<string>('');
+  const [customEmergencyType, setCustomEmergencyType] = useState<string>('');
   const [isCreatingToken, setIsCreatingToken] = useState(false);
+
+  const emergencyTypes = [
+    { id: 'cardiac', label: 'Cardiac Emergency (Heart Attack)', keyword: 'Cardiac', icon: '❤️' },
+    { id: 'accident', label: 'Accident / Trauma', keyword: 'Trauma', icon: '🚗' },
+    { id: 'stroke', label: 'Stroke / Neurological Emergency', keyword: 'Neuro', icon: '🧠' },
+    { id: 'cancer', label: 'Cancer-related Emergency', keyword: 'Oncology', icon: '🎗️' },
+    { id: 'pregnancy', label: 'Pregnancy / Delivery', keyword: 'Maternity', icon: '👶' },
+    { id: 'respiratory', label: 'Respiratory Distress', keyword: 'Pulmonary', icon: '🫁' },
+    { id: 'pediatric', label: 'Pediatric Emergency', keyword: 'Pediatric', icon: '👶' },
+    { id: 'general', label: 'General Emergency', keyword: 'General', icon: '🏥' },
+    { id: 'custom', label: 'Custom Emergency Type', keyword: 'Custom', icon: '✏️' }
+  ];
 
   // Auth redirect
   useEffect(() => {
@@ -177,11 +192,17 @@ export default function AmbulanceDashboard() {
       );
 
       if (token) {
-        toast.success(`Token Created: ${token.token_code}`, {
-          description: 'Waiting for hospital to assign hospital & route...',
+        const selectedType = emergencyTypes.find(t => t.id === emergencyType);
+        const displayType = emergencyType === 'custom' ? customEmergencyType : selectedType?.label;
+        const displayKeyword = emergencyType === 'custom' ? customEmergencyType : selectedType?.keyword;
+        
+        toast.success(`Emergency Created: ${token.token_code}`, {
+          description: `${displayType} - ${displayKeyword}`
         });
         setShowLocationPicker(false);
         setPickupLocation(null);
+        setEmergencyType('');
+        setCustomEmergencyType('');
       } else {
         toast.error('Failed to create emergency token');
       }
@@ -580,16 +601,57 @@ export default function AmbulanceDashboard() {
                 </Button>
               ) : (
                 <div className="space-y-4">
-                  <LocationPicker
-                    onLocationSelect={handleLocationSelect}
-                    initialLat={ambulance?.current_lat || 30.7333}
-                    initialLng={ambulance?.current_lng || 76.7794}
-                  />
+                  {/* Emergency Type Selection */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-emergency flex items-center gap-2">
+                      <Heart className="w-4 h-4" />
+                      Type of Emergency *
+                    </label>
+                    <Select value={emergencyType} onValueChange={setEmergencyType}>
+                      <SelectTrigger className="border-emergency/30">
+                        <SelectValue placeholder="Select emergency type..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {emergencyTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id}>
+                            <div className="flex items-center gap-2">
+                              <span>{type.icon}</span>
+                              <span>{type.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    {/* Custom Emergency Type Input */}
+                    {emergencyType === 'custom' && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-emergency">Custom Emergency Type *</label>
+                        <Input
+                          placeholder="Enter custom emergency type..."
+                          value={customEmergencyType}
+                          onChange={(e) => setCustomEmergencyType(e.target.value)}
+                          className="border-emergency/30"
+                        />
+                      </div>
+                    )}
+                    
+                    {emergencyType && emergencyType !== 'custom' && (
+                      <div className="text-xs text-muted-foreground">
+                        Medical Keyword: <Badge variant="outline">{emergencyTypes.find(t => t.id === emergencyType)?.keyword}</Badge>
+                      </div>
+                    )}
+                    {emergencyType === 'custom' && customEmergencyType && (
+                      <div className="text-xs text-muted-foreground">
+                        Custom Type: <Badge variant="outline">{customEmergencyType}</Badge>
+                      </div>
+                    )}
+                  </div>
 
                   <div className="flex gap-3">
                     <Button
                       onClick={handleCreateToken}
-                      disabled={!pickupLocation || isCreatingToken}
+                      disabled={!pickupLocation || !emergencyType || isCreatingToken}
                       className="flex-1"
                     >
                       <Ticket className="w-4 h-4 mr-2" />
@@ -600,6 +662,8 @@ export default function AmbulanceDashboard() {
                       onClick={() => {
                         setShowLocationPicker(false);
                         setPickupLocation(null);
+                        setEmergencyType('');
+                        setCustomEmergencyType('');
                       }}
                     >
                       Cancel
@@ -650,103 +714,136 @@ export default function AmbulanceDashboard() {
                   {isSimulating ? 'Stop Simulation' : 'Simulate Movement'}
                 </Button>
               </div>
+              
+              {/* Ambulance Health */}
               <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  🚑 Ambulance Health (Live)
-                  <Badge variant="outline" className="text-green-600">REAL-TIME</Badge>
-                </CardTitle>
-                <CardDescription>
-                  Live sensor data from ambulance
-                </CardDescription>
-              </CardHeader>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    🚑 Ambulance Health (Live)
+                    <Badge variant="outline" className="text-green-600">REAL-TIME</Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    Live sensor data from ambulance
+                  </CardDescription>
+                </CardHeader>
 
-              <CardContent className="space-y-5">
-                {/* Fuel */}
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>⛽ Fuel Level</span>
-                    <span>{ambulance?.vehicle_health?.fuel_percent ?? 70}%</span>
-                  </div>
-                  <div className="h-2 rounded bg-muted">
-                    <div
-                      className="h-2 rounded bg-green-500"
-                      style={{ width: `${ambulance?.vehicle_health?.fuel_percent ?? 70}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Battery */}
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>🔋 Battery</span>
-                    <span>{ambulance?.vehicle_health?.battery_percent ?? 85}%</span>
-                  </div>
-                  <div className="h-2 rounded bg-muted">
-                    <div
-                      className="h-2 rounded bg-blue-500"
-                      style={{ width: `${ambulance?.vehicle_health?.battery_percent ?? 85}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Oxygen */}
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>🫁 Oxygen Cylinder</span>
-                    <span>{ambulance?.vehicle_health?.oxygen_percent ?? 60}%</span>
-                  </div>
-                  <div className="h-2 rounded bg-muted">
-                    <div
-                      className={`h-2 rounded ${
-                        (ambulance?.vehicle_health?.oxygen_percent ?? 60) < 30
-                          ? 'bg-red-500'
-                          : 'bg-cyan-500'
-                      }`}
-                      style={{ width: `${ambulance?.vehicle_health?.oxygen_percent ?? 60}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Tyre Pressure */}
-                <div>
-                  <p className="text-sm font-medium mb-2">🛞 Tyre Pressure (PSI)</p>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="bg-muted/50 p-2 rounded">
-                      FL: {ambulance?.vehicle_health?.tyres?.front_left ?? 32} PSI
+                <CardContent className="space-y-5">
+                  {/* Fuel */}
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>⛽ Fuel Level</span>
+                      <span>{ambulance?.vehicle_health?.fuel_percent ?? 70}%</span>
                     </div>
-                    <div className="bg-muted/50 p-2 rounded">
-                      FR: {ambulance?.vehicle_health?.tyres?.front_right ?? 31} PSI
-                    </div>
-                    <div className="bg-muted/50 p-2 rounded">
-                      RL: {ambulance?.vehicle_health?.tyres?.rear_left ?? 33} PSI
-                    </div>
-                    <div className="bg-muted/50 p-2 rounded">
-                      RR: {ambulance?.vehicle_health?.tyres?.rear_right ?? 32} PSI
+                    <div className="h-2 rounded bg-muted">
+                      <div
+                        className="h-2 rounded bg-green-500"
+                        style={{ width: `${ambulance?.vehicle_health?.fuel_percent ?? 70}%` }}
+                      />
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+
+                  {/* Battery */}
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>🔋 Battery</span>
+                      <span>{ambulance?.vehicle_health?.battery_percent ?? 85}%</span>
+                    </div>
+                    <div className="h-2 rounded bg-muted">
+                      <div
+                        className="h-2 rounded bg-blue-500"
+                        style={{ width: `${ambulance?.vehicle_health?.battery_percent ?? 85}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Oxygen */}
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>🫁 Oxygen Cylinder</span>
+                      <span>{ambulance?.vehicle_health?.oxygen_percent ?? 60}%</span>
+                    </div>
+                    <div className="h-2 rounded bg-muted">
+                      <div
+                        className={`h-2 rounded ${
+                          (ambulance?.vehicle_health?.oxygen_percent ?? 60) < 30
+                            ? 'bg-red-500'
+                            : 'bg-cyan-500'
+                        }`}
+                        style={{ width: `${ambulance?.vehicle_health?.oxygen_percent ?? 60}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tyre Pressure */}
+                  <div>
+                    <p className="text-sm font-medium mb-2">🛞 Tyre Pressure (PSI)</p>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="bg-muted/50 p-2 rounded">
+                        FL: {ambulance?.vehicle_health?.tyres?.front_left ?? 32} PSI
+                      </div>
+                      <div className="bg-muted/50 p-2 rounded">
+                        FR: {ambulance?.vehicle_health?.tyres?.front_right ?? 31} PSI
+                      </div>
+                      <div className="bg-muted/50 p-2 rounded">
+                        RL: {ambulance?.vehicle_health?.tyres?.rear_left ?? 33} PSI
+                      </div>
+                      <div className="bg-muted/50 p-2 rounded">
+                        RR: {ambulance?.vehicle_health?.tyres?.rear_right ?? 32} PSI
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </CardContent>
           </Card>
 
+          {/* Unified Map */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Navigation className="w-5 h-5" />
-                Live Map
+                {showLocationPicker ? 'Select Patient Location' : 'Live Map'}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="aspect-square w-full rounded-lg overflow-hidden border">
                 <Map
                   center={ambulance ? [ambulance.current_lat, ambulance.current_lng] : [30.7333, 76.7794]}
-                  zoom={14}
-                  markers={mapMarkers}
-                  route={getCurrentRoute()?.coordinates}
+                  zoom={showLocationPicker ? 13 : 14}
+                  onMapClick={showLocationPicker ? handleLocationSelect : undefined}
+                  onLocationUpdate={(lat, lng) => updateLocation(lat, lng, 0, 0)}
+                  markers={showLocationPicker ? [
+                    // Emergency creation markers
+                    ...(ambulance ? [{
+                      position: [ambulance.current_lat, ambulance.current_lng] as [number, number],
+                      popup: `Ambulance ${ambulance.vehicle_number}`,
+                      icon: 'ambulance' as const
+                    }] : []),
+                    ...(pickupLocation ? [{
+                      position: [pickupLocation.lat, pickupLocation.lng] as [number, number],
+                      popup: 'Patient Pickup Location',
+                      icon: 'signal' as const,
+                      highlighted: true
+                    }] : [])
+                  ] : mapMarkers}
+                  route={showLocationPicker ? undefined : getCurrentRoute()?.coordinates}
                 />
               </div>
+              {showLocationPicker && (
+                <div className="mt-2">
+                  <p className="text-xs text-muted-foreground">
+                    Click on the map to select patient pickup location
+                  </p>
+                  {pickupLocation && (
+                    <div className="p-3 bg-emergency/10 border border-emergency/30 rounded-lg mt-2">
+                      <p className="text-sm font-medium text-emergency">Selected Location</p>
+                      <p className="text-xs font-mono">
+                        {pickupLocation.lat.toFixed(6)}, {pickupLocation.lng.toFixed(6)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -26,6 +26,10 @@ interface MapProps {
   className?: string;
   /** If true, map will follow center prop changes. Default false (user controls view). */
   followCenter?: boolean;
+  /** Click handler for map clicks */
+  onMapClick?: (lat: number, lng: number) => void;
+  /** Callback when user location is found */
+  onLocationUpdate?: (lat: number, lng: number) => void;
 }
 
 const createCustomIcon = (type: 'ambulance' | 'signal' | 'hospital', highlighted: boolean = false) => {
@@ -68,22 +72,65 @@ export default function Map({
   route,
   className = '',
   followCenter = false,
+  onMapClick,
+  onLocationUpdate,
 }: MapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const routeLayerRef = useRef<L.Polyline | null>(null);
+  const userLocationMarkerRef = useRef<L.Marker | null>(null);
   const initializedRef = useRef(false);
   const locateMe = () => {
-  if (!navigator.geolocation || !mapRef.current) return;
+    if (!navigator.geolocation || !mapRef.current) return;
 
- navigator.geolocation.getCurrentPosition(pos => {
-   const lat = pos.coords.latitude;
-   const lng = pos.coords.longitude;
+    navigator.geolocation.getCurrentPosition(pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
 
-   mapRef.current!.setView([lat, lng], 17, { animate: true });
- });
-};
+      // Update ambulance location if callback provided
+      if (onLocationUpdate) {
+        onLocationUpdate(lat, lng);
+      }
+
+      // Remove existing user location marker
+      if (userLocationMarkerRef.current) {
+        userLocationMarkerRef.current.remove();
+      }
+
+      // Create user location marker
+      const userIcon = L.divIcon({
+        className: 'user-location-marker',
+        html: `<div style="
+          width: 20px;
+          height: 20px;
+          background: #3b82f6;
+          border: 3px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          animation: pulse 2s infinite;
+        "></div>
+        <style>
+          @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+          }
+        </style>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+
+      userLocationMarkerRef.current = L.marker([lat, lng], { icon: userIcon })
+        .addTo(mapRef.current!)
+        .bindPopup('Your Location');
+
+      mapRef.current!.setView([lat, lng], 17, { 
+        animate: true,
+        duration: 1.5
+      });
+    });
+  };
 
   // Validate and get safe center coordinates
   const getSafeCenter = (coords: [number, number] | undefined | null): [number, number] => {
@@ -109,13 +156,23 @@ export default function Map({
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(mapRef.current);
 
+    // Add click handler if provided
+    if (onMapClick) {
+      mapRef.current.on('click', (e: L.LeafletMouseEvent) => {
+        onMapClick(e.latlng.lat, e.latlng.lng);
+      });
+    }
+
     return () => {
       if (mapRef.current) {
+        if (userLocationMarkerRef.current) {
+          userLocationMarkerRef.current.remove();
+        }
         mapRef.current.remove();
         mapRef.current = null;
       }
     };
-  }, []);
+  }, [onMapClick]);
 
   // Update center only on first render or when followCenter is true
   useEffect(() => {

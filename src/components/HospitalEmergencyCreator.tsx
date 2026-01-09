@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Hospital } from '@/hooks/useHospitals';
+import { useHospitalSpecialties } from '@/hooks/useHospitalSpecialties';
 import { RouteData } from '@/hooks/useEmergencyTokens';
-import { Search, MapPin, Ambulance, Building2, Navigation, User, Clock, Route } from 'lucide-react';
+import { Search, MapPin, Ambulance, Building2, Navigation, User, Clock, Route, Heart, AlertTriangle } from 'lucide-react';
 
 interface AmbulanceInfo {
   id: string;
@@ -28,7 +30,9 @@ interface HospitalEmergencyCreatorProps {
     pickupAddress: string | undefined,
     hospital: Hospital,
     routeToPatient: RouteData,
-    routeToHospital: RouteData
+    routeToHospital: RouteData,
+    emergencyType: string,
+    medicalKeyword: string
   ) => void;
   onCancel: () => void;
 }
@@ -37,6 +41,14 @@ interface SearchResult {
   display_name: string;
   lat: string;
   lon: string;
+}
+
+interface EmergencyType {
+  id: string;
+  label: string;
+  keyword: string;
+  icon: string;
+  specializations: string[];
 }
 
 export default function HospitalEmergencyCreator({
@@ -55,12 +67,27 @@ export default function HospitalEmergencyCreator({
   const [isSearching, setIsSearching] = useState(false);
   
   const [patientLocation, setPatientLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
+  const [emergencyType, setEmergencyType] = useState<string>('');
   const [selectedAmbulance, setSelectedAmbulance] = useState<AmbulanceInfo | null>(null);
+  const [bestHospital, setBestHospital] = useState<Hospital | null>(null);
   const [nearestHospital, setNearestHospital] = useState<Hospital | null>(null);
   const [routeToPatient, setRouteToPatient] = useState<RouteData | null>(null);
   const [routeToHospital, setRouteToHospital] = useState<RouteData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'location' | 'ambulance' | 'confirm'>('location');
+  const [step, setStep] = useState<'location' | 'emergency-type' | 'ambulance' | 'confirm'>('location');
+
+  const emergencyTypes: EmergencyType[] = [
+    { id: 'heart-attack', label: 'Heart Attack', keyword: 'Cardiac', icon: '❤️', specializations: ['cardiology', 'cardiac', 'heart'] },
+    { id: 'accident', label: 'Accident / Trauma', keyword: 'Trauma', icon: '🚗', specializations: ['trauma', 'emergency', 'surgery'] },
+    { id: 'stroke', label: 'Stroke', keyword: 'Neuro', icon: '🧠', specializations: ['neurology', 'neuro', 'stroke'] },
+    { id: 'pregnancy', label: 'Pregnancy / Delivery', keyword: 'Maternity', icon: '👶', specializations: ['maternity', 'obstetrics', 'gynecology'] },
+    { id: 'burns', label: 'Burns', keyword: 'Burns', icon: '🔥', specializations: ['burns', 'plastic surgery', 'trauma'] },
+    { id: 'respiratory', label: 'Respiratory Emergency', keyword: 'Respiratory', icon: '🫁', specializations: ['pulmonology', 'respiratory', 'icu'] },
+    { id: 'pediatric', label: 'Pediatric Emergency', keyword: 'Pediatric', icon: '👶', specializations: ['pediatrics', 'children', 'nicu'] },
+    { id: 'general', label: 'General Emergency', keyword: 'General', icon: '🏥', specializations: ['emergency', 'general'] }
+  ];
+
+  const { findBestHospitals } = useHospitalSpecialties();
 
   // Filter only free ambulances
   const freeAmbulances = ambulances.filter(a => 
@@ -89,16 +116,14 @@ export default function HospitalEmergencyCreator({
         .sort((a, b) => a.distance - b.distance)
     : freeAmbulances.map(a => ({ ...a, distance: 0 }));
 
-  // Find nearest hospital from patient location
-  const findNearestHospital = useCallback((lat: number, lng: number) => {
-    const sorted = [...hospitals]
-      .map(h => ({
-        ...h,
-        distance: calculateDistance(lat, lng, h.location_lat, h.location_lng)
-      }))
-      .sort((a, b) => a.distance - b.distance);
-    return sorted[0] || null;
-  }, [hospitals]);
+  // Find best hospital based on emergency type and nearest hospital
+  const findBestHospital = useCallback((lat: number, lng: number, emergencyTypeId: string) => {
+    const selectedType = emergencyTypes.find(t => t.id === emergencyTypeId);
+    if (!selectedType) return null;
+
+    const { best } = findBestHospitals(lat, lng, selectedType.keyword);
+    return best?.hospital || null;
+  }, [findBestHospitals, emergencyTypes]);
 
   // Fetch route between two points
   const fetchRoute = async (
@@ -299,20 +324,29 @@ export default function HospitalEmergencyCreator({
   };
 
   const handleSelectAmbulance = async (ambulance: AmbulanceInfo & { distance: number }) => {
-    if (!patientLocation || !ambulance.current_lat || !ambulance.current_lng) return;
+    if (!patientLocation || !emergencyType || !ambulance.current_lat || !ambulance.current_lng) return;
     
     setSelectedAmbulance(ambulance);
     setLoading(true);
 
-    // Find nearest hospital
-    const hospital = findNearestHospital(patientLocation.lat, patientLocation.lng);
-    if (!hospital) {
+    // Find best hospital for emergency type
+    const bestHosp = findBestHospital(patientLocation.lat, patientLocation.lng, emergencyType);
+    if (!bestHosp) {
       setLoading(false);
       return;
     }
-    setNearestHospital(hospital);
+    setBestHospital(bestHosp);
 
-    // Calculate routes
+    // Also find nearest hospital for comparison
+    const nearestHosp = [...hospitals]
+      .map(h => ({
+        ...h,
+        distance: calculateDistance(patientLocation.lat, patientLocation.lng, h.location_lat, h.location_lng)
+      }))
+      .sort((a, b) => a.distance - b.distance)[0];
+    setNearestHospital(nearestHosp);
+
+    // Calculate routes to best hospital
     const routePatient = await fetchRoute(
       ambulance.current_lat,
       ambulance.current_lng,
@@ -323,8 +357,8 @@ export default function HospitalEmergencyCreator({
     const routeHospital = await fetchRoute(
       patientLocation.lat,
       patientLocation.lng,
-      hospital.location_lat,
-      hospital.location_lng
+      bestHosp.location_lat,
+      bestHosp.location_lng
     );
 
     if (routePatient && routeHospital) {
@@ -337,16 +371,21 @@ export default function HospitalEmergencyCreator({
   };
 
   const handleConfirmEmergency = () => {
-    if (!selectedAmbulance || !patientLocation || !nearestHospital || !routeToPatient || !routeToHospital) return;
+    if (!selectedAmbulance || !patientLocation || !bestHospital || !routeToPatient || !routeToHospital || !emergencyType) return;
+    
+    const selectedEmergencyType = emergencyTypes.find(t => t.id === emergencyType);
+    if (!selectedEmergencyType) return;
     
     onCreateEmergency(
       selectedAmbulance,
       patientLocation.lat,
       patientLocation.lng,
       patientLocation.address,
-      nearestHospital,
+      bestHospital,
       routeToPatient,
-      routeToHospital
+      routeToHospital,
+      selectedEmergencyType.label,
+      selectedEmergencyType.keyword
     );
   };
 
@@ -363,8 +402,9 @@ export default function HospitalEmergencyCreator({
           <h2 className="text-xl font-bold">Create Emergency</h2>
           <p className="text-sm text-muted-foreground">
             {step === 'location' && 'Step 1: Mark patient location on map'}
-            {step === 'ambulance' && 'Step 2: Select a free ambulance'}
-            {step === 'confirm' && 'Step 3: Confirm and dispatch'}
+            {step === 'emergency-type' && 'Step 2: Select emergency type'}
+            {step === 'ambulance' && 'Step 3: Select a free ambulance'}
+            {step === 'confirm' && 'Step 4: Confirm and dispatch'}
           </p>
         </div>
         <Button variant="outline" onClick={onCancel}>Cancel</Button>
@@ -372,11 +412,13 @@ export default function HospitalEmergencyCreator({
 
       {/* Step indicators */}
       <div className="flex items-center gap-2">
-        <Badge variant={step === 'location' ? 'default' : 'secondary'}>1. Patient Location</Badge>
+        <Badge variant={step === 'location' ? 'default' : 'secondary'}>1. Location</Badge>
         <div className="w-4 h-0.5 bg-border" />
-        <Badge variant={step === 'ambulance' ? 'default' : 'secondary'}>2. Select Ambulance</Badge>
+        <Badge variant={step === 'emergency-type' ? 'default' : 'secondary'}>2. Emergency Type</Badge>
         <div className="w-4 h-0.5 bg-border" />
-        <Badge variant={step === 'confirm' ? 'default' : 'secondary'}>3. Confirm</Badge>
+        <Badge variant={step === 'ambulance' ? 'default' : 'secondary'}>3. Ambulance</Badge>
+        <div className="w-4 h-0.5 bg-border" />
+        <Badge variant={step === 'confirm' ? 'default' : 'secondary'}>4. Confirm</Badge>
       </div>
 
       {/* Search bar */}
@@ -435,12 +477,63 @@ export default function HospitalEmergencyCreator({
                   </p>
                 </div>
               </div>
-              <Button onClick={() => setStep('ambulance')}>
-                Next: Select Ambulance
+              <Button onClick={() => setStep('emergency-type')}>
+                Next: Emergency Type
               </Button>
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Emergency Type Selection */}
+      {step === 'emergency-type' && (
+        <div className="space-y-4">
+          <Card className="border-orange-500/30 bg-orange-500/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-orange-600">
+                <AlertTriangle className="w-5 h-5" />
+                What type of emergency is this?
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {emergencyTypes.map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => setEmergencyType(type.id)}
+                  className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                    emergencyType === type.id
+                      ? 'border-primary bg-primary/10 ring-2 ring-primary'
+                      : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{type.icon}</span>
+                    <div className="flex-1">
+                      <div className="font-medium">{type.label}</div>
+                      <div className="text-sm text-muted-foreground">Medical Keyword: {type.keyword}</div>
+                    </div>
+                    {emergencyType === type.id && (
+                      <Badge variant="default">Selected</Badge>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+          
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setStep('location')} className="flex-1">
+              Back to Location
+            </Button>
+            <Button 
+              onClick={() => setStep('ambulance')} 
+              disabled={!emergencyType}
+              className="flex-1"
+            >
+              Next: Select Ambulance
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Ambulance selection */}
@@ -483,8 +576,8 @@ export default function HospitalEmergencyCreator({
             </div>
           )}
           
-          <Button variant="outline" onClick={() => setStep('location')} className="w-full">
-            Back to Location
+          <Button variant="outline" onClick={() => setStep('emergency-type')} className="w-full">
+            Back to Emergency Type
           </Button>
         </div>
       )}
@@ -498,8 +591,46 @@ export default function HospitalEmergencyCreator({
       )}
 
       {/* Confirmation */}
-      {step === 'confirm' && routeToPatient && routeToHospital && nearestHospital && (
+      {step === 'confirm' && routeToPatient && routeToHospital && bestHospital && (
         <div className="space-y-4">
+          {/* Emergency Type Summary */}
+          <Card className="border-orange-500/30 bg-orange-500/5">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{emergencyTypes.find(t => t.id === emergencyType)?.icon}</span>
+                <div>
+                  <p className="font-medium">{emergencyTypes.find(t => t.id === emergencyType)?.label}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Medical Keyword: <Badge variant="outline">{emergencyTypes.find(t => t.id === emergencyType)?.keyword}</Badge>
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Hospital Recommendation */}
+          <Card className="border-green-500/30 bg-green-500/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-600">
+                <Building2 className="w-5 h-5" />
+                Recommended Hospital
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <p className="font-medium">{bestHospital.organization_name}</p>
+                <p className="text-sm text-muted-foreground">{bestHospital.address}</p>
+                <div className="flex gap-2">
+                  <Badge variant="secondary">Best for {emergencyTypes.find(t => t.id === emergencyType)?.keyword}</Badge>
+                  {nearestHospital && bestHospital.id === nearestHospital.id && (
+                    <Badge variant="secondary">Also Nearest</Badge>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Route Information */}
           <Card className="border-blue-500/30 bg-blue-500/5">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
@@ -524,7 +655,7 @@ export default function HospitalEmergencyCreator({
                 <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-xs font-bold">2</span>
                 </div>
-                Patient → {nearestHospital.organization_name}
+                Patient → {bestHospital.organization_name}
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">

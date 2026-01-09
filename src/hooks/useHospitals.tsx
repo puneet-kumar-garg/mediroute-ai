@@ -8,6 +8,10 @@ export interface Hospital {
   full_name: string | null;
   location_lat: number;
   location_lng: number;
+  address?: string;
+  specialties?: string[];
+  capabilities?: any;
+  last_updated_specialties?: string;
 }
 
 // Default hospital locations with all details (using generated UUIDs)
@@ -64,7 +68,7 @@ export function useHospitals() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, organization_name, email, full_name')
+        .select('id, organization_name, email, full_name, address, specialties, capabilities, last_updated_specialties')
         .eq('role', 'hospital');
 
       if (error) throw error;

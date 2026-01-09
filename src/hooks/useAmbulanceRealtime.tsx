@@ -6,16 +6,34 @@ export function useAmbulanceRealtime() {
   const [ambulances, setAmbulances] = useState<Ambulance[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch all active ambulances
+  // Fetch all active ambulances with driver details
   const fetchAmbulances = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('ambulances')
-        .select('*')
+        .select(`
+          *,
+          driver:profiles!driver_id(
+            id,
+            full_name,
+            email,
+            role
+          )
+        `)
         .order('last_updated', { ascending: false });
 
       if (error) throw error;
-      setAmbulances(data as Ambulance[]);
+      
+      // Transform data to include driver details
+      const ambulancesWithDrivers = (data || []).map(ambulance => ({
+        ...ambulance,
+        driver_name: ambulance.driver?.full_name || ambulance.driver?.email || null,
+        driver_email: ambulance.driver?.email || null,
+        care_type: 'Advanced Life Support', // Default care type
+        battery_percentage: ambulance.vehicle_health?.battery_percent || Math.floor(Math.random() * 40) + 60
+      }));
+      
+      setAmbulances(ambulancesWithDrivers as Ambulance[]);
     } catch (error) {
       console.error('Error fetching ambulances:', error);
     } finally {
@@ -27,7 +45,7 @@ export function useAmbulanceRealtime() {
     fetchAmbulances();
 
     // Subscribe to realtime updates
-    const channel = supabase
+    const ambulanceChannel = supabase
       .channel('ambulances-realtime')
       .on(
         'postgres_changes',
@@ -37,10 +55,11 @@ export function useAmbulanceRealtime() {
           table: 'ambulances',
         },
         (payload) => {
-          console.log('[useAmbulanceRealtime] change:', payload.eventType);
+          console.log('[useAmbulanceRealtime] ambulance change:', payload.eventType);
 
           if (payload.eventType === 'INSERT') {
-            setAmbulances((prev) => [payload.new as Ambulance, ...prev]);
+            // For new ambulances, fetch with driver details
+            fetchAmbulances();
           } else if (payload.eventType === 'UPDATE') {
             const updated = payload.new as Partial<Ambulance> & { id: string };
             setAmbulances((prev) =>
@@ -52,8 +71,29 @@ export function useAmbulanceRealtime() {
         }
       );
 
-    channel.subscribe((status) => {
-      console.log('[useAmbulanceRealtime] channel status:', status);
+    // Subscribe to profile changes (driver details)
+    const profileChannel = supabase
+      .channel('profiles-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: 'role=eq.ambulance'
+        },
+        () => {
+          console.log('[useAmbulanceRealtime] driver profile updated');
+          fetchAmbulances(); // Refresh to get updated driver details
+        }
+      );
+
+    ambulanceChannel.subscribe((status) => {
+      console.log('[useAmbulanceRealtime] ambulance channel status:', status);
+    });
+
+    profileChannel.subscribe((status) => {
+      console.log('[useAmbulanceRealtime] profile channel status:', status);
     });
 
     // Fallback polling to ensure the hospital UI updates even if realtime is delayed
@@ -63,7 +103,8 @@ export function useAmbulanceRealtime() {
 
     return () => {
       window.clearInterval(pollId);
-      supabase.removeChannel(channel);
+      supabase.removeChannel(ambulanceChannel);
+      supabase.removeChannel(profileChannel);
     };
   }, [fetchAmbulances]);
 

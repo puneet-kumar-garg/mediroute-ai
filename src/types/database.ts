@@ -33,6 +33,12 @@ export interface Ambulance {
   destination_name: string | null;
   last_updated: string;
   created_at: string;
+  // Driver details (joined from profiles)
+  driver_name?: string | null;
+  driver_email?: string | null;
+  care_type?: string | null;
+  battery_percentage?: number | null;
+  active_token_id?: string | null;
 }
 
 export interface TrafficSignal {

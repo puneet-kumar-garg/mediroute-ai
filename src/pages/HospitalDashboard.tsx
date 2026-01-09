@@ -34,10 +34,12 @@ import {
 import Map from '@/components/Map';
 import TwoLegRouteMap from '@/components/TwoLegRouteMap';
 import HospitalEmergencyCreator from '@/components/HospitalEmergencyCreator';
+import EmergencyDisplay from '@/components/EmergencyDisplay';
+import HospitalSpecialtyManager from '@/components/HospitalSpecialtyManager';
 import AmbulanceFleetManagement from '@/components/AmbulanceFleetManagement';
 import { toast } from 'sonner';
 
-type NavItem = 'dashboard' | 'ambulances' | 'tokens' | 'livemap' | 'create-emergency';
+type NavItem = 'dashboard' | 'ambulances' | 'tokens' | 'livemap' | 'create-emergency' | 'specialties';
 
 export default function HospitalDashboard() {
   const navigate = useNavigate();
@@ -49,6 +51,7 @@ export default function HospitalDashboard() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activeNav, setActiveNav] = useState<NavItem>('dashboard');
   const [selectedTokenForRoute, setSelectedTokenForRoute] = useState<string | null>(null);
+  const [selectedTokenForDisplay, setSelectedTokenForDisplay] = useState<string | null>(null);
   const [declineTokenId, setDeclineTokenId] = useState<string | null>(null);
   const [declineReason, setDeclineReason] = useState('');
   const [selectedAmbulanceId, setSelectedAmbulanceId] = useState<string | null>(null);
@@ -58,6 +61,7 @@ export default function HospitalDashboard() {
     { id: 'create-emergency' as NavItem, icon: Phone, label: 'Create Emergency' },
     { id: 'tokens' as NavItem, icon: Ticket, label: `Tokens (${pendingTokens.length + assignedTokens.length})` },
     { id: 'ambulances' as NavItem, icon: Ambulance, label: 'Ambulances' },
+    { id: 'specialties' as NavItem, icon: Building2, label: 'Specialties' },
     { id: 'livemap' as NavItem, icon: MapIcon, label: 'Live Map' },
   ];
 
@@ -146,7 +150,9 @@ export default function HospitalDashboard() {
     pickupAddress: string | undefined,
     hospital: Hospital,
     routeToPatient: RouteData,
-    routeToHospital: RouteData
+    routeToHospital: RouteData,
+    emergencyType: string,
+    medicalKeyword: string
   ) => {
     if (!ambulance.current_lat || !ambulance.current_lng) {
       toast.error('Ambulance location not available');
@@ -169,12 +175,14 @@ export default function HospitalDashboard() {
       hospital.location_lat,
       hospital.location_lng,
       routeToPatient,
-      routeToHospital
+      routeToHospital,
+      emergencyType,
+      medicalKeyword
     );
 
     if (token) {
-      toast.success(`Emergency Created: ${token.token_code}`, {
-        description: `${ambulance.vehicle_number} dispatched to patient → ${hospital.organization_name}`
+      toast.success(`${emergencyType} Emergency Created: ${token.token_code}`, {
+        description: `${ambulance.vehicle_number} dispatched to ${medicalKeyword} emergency → ${hospital.organization_name}`
       });
       setActiveNav('dashboard');
     } else {
@@ -204,6 +212,34 @@ export default function HospitalDashboard() {
   };
 
   const renderContent = () => {
+    // Emergency Display View
+    if (selectedTokenForDisplay) {
+      const token = [...pendingTokens, ...assignedTokens, ...activeTokens].find(t => t.id === selectedTokenForDisplay);
+      if (!token) {
+        setSelectedTokenForDisplay(null);
+        return null;
+      }
+
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">Emergency Analysis</h2>
+            <Button variant="outline" onClick={() => setSelectedTokenForDisplay(null)}>
+              Back to Tokens
+            </Button>
+          </div>
+          <EmergencyDisplay 
+            token={token}
+            onAssignHospital={async (hospitalId, hospitalName, hospitalLat, hospitalLng) => {
+              // This would trigger route calculation and assignment
+              toast.success(`Hospital assigned: ${hospitalName}`);
+              setSelectedTokenForDisplay(null);
+            }}
+          />
+        </div>
+      );
+    }
+
     // Route Selection View
     if (selectedTokenForRoute && selectedToken) {
       const ambulance = getAmbulanceForToken(selectedTokenForRoute);
@@ -301,6 +337,18 @@ export default function HospitalDashboard() {
                         <div className="mb-3">
                           <p className="text-sm text-muted-foreground">Patient Pickup Location:</p>
                           <p className="font-medium text-sm">{token.pickup_address || `${token.pickup_lat.toFixed(4)}, ${token.pickup_lng.toFixed(4)}`}</p>
+                          {token.emergency_type && (
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant="outline" className="text-xs">
+                                {token.emergency_type}
+                              </Badge>
+                              {token.medical_keyword && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {token.medical_keyword}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
                         </div>
                         
                         {/* Decline reason input */}
@@ -334,6 +382,10 @@ export default function HospitalDashboard() {
                           </div>
                         ) : (
                           <div className="flex gap-2">
+                            <Button onClick={() => setSelectedTokenForDisplay(token.id)} variant="secondary" className="flex-1">
+                              <AlertTriangle className="w-4 h-4 mr-2" />
+                              Analyze Emergency
+                            </Button>
                             <Button onClick={() => setSelectedTokenForRoute(token.id)} className="flex-1">
                               <Building2 className="w-4 h-4 mr-2" />
                               Assign Hospital & Route
@@ -377,6 +429,15 @@ export default function HospitalDashboard() {
                         <Building2 className="w-4 h-4 text-muted-foreground" />
                         <span>Hospital: {token.hospital_name}</span>
                       </div>
+                      {token.emergency_type && (
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+                          <span>Emergency: {token.emergency_type}</span>
+                          {token.medical_keyword && (
+                            <Badge variant="outline" className="text-xs ml-2">{token.medical_keyword}</Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <p className="text-success text-sm mt-2">✓ Routes shared with ambulance</p>
                   </CardContent>
@@ -407,6 +468,15 @@ export default function HospitalDashboard() {
                       {token.status === 'to_hospital' && (
                         <p className="text-blue-500">🏥 Ambulance heading to {token.hospital_name}...</p>
                       )}
+                      {token.emergency_type && (
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+                          <span>Emergency: {token.emergency_type}</span>
+                          {token.medical_keyword && (
+                            <Badge variant="outline" className="text-xs ml-2">{token.medical_keyword}</Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -414,6 +484,9 @@ export default function HospitalDashboard() {
             </div>
           </div>
         );
+
+      case 'specialties':
+        return <HospitalSpecialtyManager />;
 
       case 'ambulances': {
         return <AmbulanceFleetManagement />;

@@ -25,6 +25,9 @@ export interface EmergencyToken {
   hospital_name: string | null;
   hospital_lat: number | null;
   hospital_lng: number | null;
+  // Emergency type information
+  emergency_type: string | null;
+  medical_keyword: string | null;
   // Route to patient (leg 1)
   route_to_patient: RouteData | null;
   route_to_patient_distance_meters: number | null;
@@ -233,7 +236,9 @@ export function useEmergencyTokens() {
     hospitalLat: number,
     hospitalLng: number,
     routeToPatient: RouteData,
-    routeToHospital: RouteData
+    routeToHospital: RouteData,
+    emergencyType?: string,
+    medicalKeyword?: string
   ): Promise<EmergencyToken | null> => {
     if (!isHospitalUser) {
       console.error('Only hospital users can create hospital emergencies');
@@ -247,32 +252,38 @@ export function useEmergencyTokens() {
       const resolvedHospitalId = isUuid(hospitalId) ? hospitalId : user?.id ?? null;
 
       // Create token with all data filled in
+      const insertData: any = {
+        ambulance_id: ambulanceId,
+        pickup_lat: pickupLat,
+        pickup_lng: pickupLng,
+        pickup_address: pickupAddress || null,
+        ambulance_origin_lat: ambulanceLat,
+        ambulance_origin_lng: ambulanceLng,
+        hospital_id: resolvedHospitalId,
+        hospital_name: hospitalName,
+        hospital_lat: hospitalLat,
+        hospital_lng: hospitalLng,
+        route_to_patient: JSON.parse(JSON.stringify(routeToPatient)),
+        route_to_patient_distance_meters: routeToPatient.distance,
+        route_to_patient_duration_seconds: routeToPatient.duration,
+        route_to_hospital: JSON.parse(JSON.stringify(routeToHospital)),
+        route_to_hospital_distance_meters: routeToHospital.distance,
+        route_to_hospital_duration_seconds: routeToHospital.duration,
+        selected_route: JSON.parse(JSON.stringify(routeToPatient)),
+        route_type: routeToPatient.type,
+        route_distance_meters: routeToPatient.distance + routeToHospital.distance,
+        route_duration_seconds: routeToPatient.duration + routeToHospital.duration,
+        status: 'route_selected',
+        assigned_at: new Date().toISOString()
+      };
+
+      // Add emergency type fields if provided
+      if (emergencyType) insertData.emergency_type = emergencyType;
+      if (medicalKeyword) insertData.medical_keyword = medicalKeyword;
+
       const { data, error } = await supabase
         .from('emergency_tokens')
-        .insert({
-          ambulance_id: ambulanceId,
-          pickup_lat: pickupLat,
-          pickup_lng: pickupLng,
-          pickup_address: pickupAddress || null,
-          ambulance_origin_lat: ambulanceLat,
-          ambulance_origin_lng: ambulanceLng,
-          hospital_id: resolvedHospitalId,
-          hospital_name: hospitalName,
-          hospital_lat: hospitalLat,
-          hospital_lng: hospitalLng,
-          route_to_patient: JSON.parse(JSON.stringify(routeToPatient)),
-          route_to_patient_distance_meters: routeToPatient.distance,
-          route_to_patient_duration_seconds: routeToPatient.duration,
-          route_to_hospital: JSON.parse(JSON.stringify(routeToHospital)),
-          route_to_hospital_distance_meters: routeToHospital.distance,
-          route_to_hospital_duration_seconds: routeToHospital.duration,
-          selected_route: JSON.parse(JSON.stringify(routeToPatient)),
-          route_type: routeToPatient.type,
-          route_distance_meters: routeToPatient.distance + routeToHospital.distance,
-          route_duration_seconds: routeToPatient.duration + routeToHospital.duration,
-          status: 'route_selected',
-          assigned_at: new Date().toISOString()
-        })
+        .insert(insertData)
         .select()
         .single();
 
