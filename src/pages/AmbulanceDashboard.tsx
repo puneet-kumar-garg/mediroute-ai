@@ -651,7 +651,7 @@ export default function AmbulanceDashboard() {
                   <div className="flex gap-3">
                     <Button
                       onClick={handleCreateToken}
-                      disabled={!pickupLocation || !emergencyType || isCreatingToken}
+                      disabled={!pickupLocation || !emergencyType || (emergencyType === 'custom' && !customEmergencyType.trim()) || isCreatingToken}
                       className="flex-1"
                     >
                       <Ticket className="w-4 h-4 mr-2" />
@@ -712,6 +712,34 @@ export default function AmbulanceDashboard() {
                   className="text-xs sm:text-sm"
                 >
                   {isSimulating ? 'Stop Simulation' : 'Simulate Movement'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (navigator.geolocation) {
+                      navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                          updateLocation(
+                            position.coords.latitude,
+                            position.coords.longitude,
+                            position.coords.heading || 0,
+                            (position.coords.speed || 0) * 3.6
+                          );
+                          toast.success('Location updated successfully!');
+                        },
+                        (error) => {
+                          toast.error('Failed to get location. Please enable location access.');
+                        },
+                        { enableHighAccuracy: true }
+                      );
+                    } else {
+                      toast.error('Geolocation not supported by this browser.');
+                    }
+                  }}
+                  className="text-xs sm:text-sm"
+                >
+                  📍 Share Location
                 </Button>
               </div>
               

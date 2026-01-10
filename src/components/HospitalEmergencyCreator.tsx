@@ -31,8 +31,8 @@ interface HospitalEmergencyCreatorProps {
     hospital: Hospital,
     routeToPatient: RouteData,
     routeToHospital: RouteData,
-    emergencyType: string,
-    medicalKeyword: string
+    emergencyType?: string,
+    medicalKeyword?: string
   ) => void;
   onCancel: () => void;
 }
@@ -371,10 +371,9 @@ export default function HospitalEmergencyCreator({
   };
 
   const handleConfirmEmergency = () => {
-    if (!selectedAmbulance || !patientLocation || !bestHospital || !routeToPatient || !routeToHospital || !emergencyType) return;
+    if (!selectedAmbulance || !patientLocation || !bestHospital || !routeToPatient || !routeToHospital) return;
     
     const selectedEmergencyType = emergencyTypes.find(t => t.id === emergencyType);
-    if (!selectedEmergencyType) return;
     
     onCreateEmergency(
       selectedAmbulance,
@@ -384,8 +383,8 @@ export default function HospitalEmergencyCreator({
       bestHospital,
       routeToPatient,
       routeToHospital,
-      selectedEmergencyType.label,
-      selectedEmergencyType.keyword
+      selectedEmergencyType?.label || 'General Emergency',
+      selectedEmergencyType?.keyword || 'General'
     );
   };
 
