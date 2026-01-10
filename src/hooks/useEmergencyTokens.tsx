@@ -85,19 +85,43 @@ export function useEmergencyTokens() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('emergency_tokens')
         .select('*')
         .order('created_at', { ascending: false });
 
+      // Filter tokens based on user role
+      if (isAmbulanceDriver) {
+        // Ambulance drivers only see tokens for their ambulance
+        const { data: ambulanceData } = await supabase
+          .from('ambulances')
+          .select('id')
+          .eq('driver_id', user.id)
+          .single();
+        
+        if (ambulanceData) {
+          query = query.eq('ambulance_id', ambulanceData.id);
+        } else {
+          // No ambulance assigned to this driver
+          setTokens([]);
+          setActiveToken(null);
+          setLoading(false);
+          return;
+        }
+      }
+      // Hospital users see all tokens (for now)
+
+      const { data, error } = await query;
+
       if (error) throw error;
       
       const typedData = (data || []).map(normalizeToken);
-
-      
       setTokens(typedData);
 
-      const active = findActiveToken(typedData);
+      // For ambulance drivers, find active token for their ambulance only
+      const active = isAmbulanceDriver 
+        ? typedData.find((t) => ACTIVE_TOKEN_STATUSES.includes(t.status)) ?? null
+        : findActiveToken(typedData);
       setActiveToken(active);
 
     } catch (error) {
@@ -105,7 +129,7 @@ export function useEmergencyTokens() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, isAmbulanceDriver]);
 
   useEffect(() => {
     fetchTokens();
@@ -123,11 +147,32 @@ export function useEmergencyTokens() {
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const newToken = normalizeToken(payload.new);
-            setTokens((prev) => {
-              const next = [newToken, ...prev];
-              setActiveToken(findActiveToken(next));
-              return next;
-            });
+            
+            // Filter realtime updates based on user role
+            if (isAmbulanceDriver) {
+              // Only show tokens for this ambulance driver's ambulance
+              supabase
+                .from('ambulances')
+                .select('id')
+                .eq('driver_id', user?.id)
+                .single()
+                .then(({ data: ambulanceData }) => {
+                  if (ambulanceData && newToken.ambulance_id === ambulanceData.id) {
+                    setTokens((prev) => {
+                      const next = [newToken, ...prev];
+                      setActiveToken(findActiveToken(next));
+                      return next;
+                    });
+                  }
+                });
+            } else {
+              // Hospital users see all tokens
+              setTokens((prev) => {
+                const next = [newToken, ...prev];
+                setActiveToken(findActiveToken(next));
+                return next;
+              });
+            }
           } else if (payload.eventType === 'UPDATE') {
             const updatedToken = normalizeToken(payload.new);
 
