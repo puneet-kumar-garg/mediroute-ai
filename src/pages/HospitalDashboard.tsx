@@ -116,6 +116,12 @@ export default function HospitalDashboard() {
       return;
     }
 
+    console.log('Attempting to assign hospital:', {
+      tokenId: selectedTokenForRoute,
+      hospitalId: user.id,
+      hospitalName: selectedHospital.organization_name
+    });
+
     try {
       const success = await assignHospitalWithRoutes(
         selectedTokenForRoute,
@@ -134,7 +140,7 @@ export default function HospitalDashboard() {
         setSelectedTokenForRoute(null);
         setActiveNav('dashboard');
       } else {
-        toast.error('Failed to share routes. Please try again.');
+        toast.error('Failed to share routes. Please check console for details.');
       }
     } catch (error) {
       console.error('Error sharing routes:', error);

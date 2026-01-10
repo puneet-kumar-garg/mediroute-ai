@@ -403,10 +403,36 @@ export function useEmergencyTokens() {
         return false;
       }
 
+      console.log('Assigning hospital with routes:', {
+        tokenId,
+        hospitalId,
+        hospitalName,
+        user: user.id
+      });
+
       const isUuid = (value: string) =>
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
       const resolvedHospitalId = isUuid(hospitalId) ? hospitalId : user.id;
+
+      // First check if token exists and is in correct status
+      const { data: existingToken, error: fetchError } = await supabase
+        .from('emergency_tokens')
+        .select('*')
+        .eq('id', tokenId)
+        .single();
+
+      if (fetchError) {
+        console.error('Token not found:', fetchError);
+        return false;
+      }
+
+      if (!existingToken) {
+        console.error('Token does not exist');
+        return false;
+      }
+
+      console.log('Found existing token:', existingToken.token_code, 'status:', existingToken.status);
 
       // IMPORTANT: request the updated row back. If RLS blocks the update (0 rows),
       // supabase-js can otherwise return success with no error.
@@ -437,7 +463,17 @@ export function useEmergencyTokens() {
         .select('*')
         .single();
 
-      if (error || !data) throw error;
+      if (error) {
+        console.error('Update error:', error);
+        return false;
+      }
+
+      if (!data) {
+        console.error('No data returned from update - possible RLS issue');
+        return false;
+      }
+
+      console.log('Successfully updated token:', data.token_code);
 
       // Immediately update local state to ensure UI reflects changes
       const updated = normalizeToken(data);
