@@ -237,25 +237,6 @@ export function useEmergencyTokens() {
     emergencyType?: string,
     medicalKeyword?: string
   ): Promise<EmergencyToken | null> => {
-    console.log('createHospitalEmergency called with:', {
-      ambulanceId,
-      ambulanceLat,
-      ambulanceLng,
-      pickupLat,
-      pickupLng,
-      pickupAddress,
-      hospitalId,
-      hospitalName,
-      hospitalLat,
-      hospitalLng,
-      routeToPatient,
-      routeToHospital,
-      emergencyType,
-      medicalKeyword,
-      isHospitalUser,
-      user: user?.id
-    });
-
     if (!isHospitalUser) {
       console.error('Only hospital users can create hospital emergencies');
       return null;
@@ -297,35 +278,22 @@ export function useEmergencyTokens() {
       if (emergencyType) insertData.emergency_type = emergencyType;
       if (medicalKeyword) insertData.medical_keyword = medicalKeyword;
 
-      console.log('Inserting emergency token with data:', insertData);
-
       const { data, error } = await supabase
         .from('emergency_tokens')
         .insert(insertData)
         .select()
         .single();
 
-      if (error) {
-        console.error('Supabase insert error:', error);
-        throw error;
-      }
-
-      console.log('Emergency token created successfully:', data);
+      if (error) throw error;
 
       // Update ambulance with active token
-      const { error: ambulanceError } = await supabase
+      await supabase
         .from('ambulances')
         .update({ 
           active_token_id: data.id,
           emergency_status: 'active'
         })
         .eq('id', ambulanceId);
-
-      if (ambulanceError) {
-        console.error('Error updating ambulance:', ambulanceError);
-      } else {
-        console.log('Ambulance updated successfully');
-      }
 
       const typedToken = {
         ...data,

@@ -178,7 +178,15 @@ export default function AmbulanceDashboard() {
   };
 
   const handleCreateToken = async () => {
-    if (!ambulance || !pickupLocation) return;
+    if (!ambulance || !pickupLocation || !emergencyType) {
+      toast.error('Please select emergency type and pickup location');
+      return;
+    }
+
+    if (emergencyType === 'custom' && !customEmergencyType.trim()) {
+      toast.error('Please enter custom emergency type');
+      return;
+    }
 
     setIsCreatingToken(true);
     try {
