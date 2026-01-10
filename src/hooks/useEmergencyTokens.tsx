@@ -77,8 +77,16 @@ export function useEmergencyTokens() {
     'to_hospital',
   ];
 
-  const findActiveToken = (list: EmergencyToken[]) =>
-    list.find((t) => ACTIVE_TOKEN_STATUSES.includes(t.status)) ?? null;
+  const findActiveToken = (list: EmergencyToken[], ambulanceId?: string) => {
+    if (ambulanceId) {
+      // For ambulance drivers, find active token for their specific ambulance
+      return list.find((t) => 
+        ACTIVE_TOKEN_STATUSES.includes(t.status) && t.ambulance_id === ambulanceId
+      ) ?? null;
+    }
+    // For hospital users, find any active token
+    return list.find((t) => ACTIVE_TOKEN_STATUSES.includes(t.status)) ?? null;
+  };
 
   // Fetch tokens based on user role
   const fetchTokens = useCallback(async () => {
@@ -119,8 +127,8 @@ export function useEmergencyTokens() {
       setTokens(typedData);
 
       // For ambulance drivers, find active token for their ambulance only
-      const active = isAmbulanceDriver 
-        ? typedData.find((t) => ACTIVE_TOKEN_STATUSES.includes(t.status)) ?? null
+      const active = isAmbulanceDriver && ambulanceData
+        ? findActiveToken(typedData, ambulanceData.id)
         : findActiveToken(typedData);
       setActiveToken(active);
 
@@ -160,7 +168,7 @@ export function useEmergencyTokens() {
                   if (ambulanceData && newToken.ambulance_id === ambulanceData.id) {
                     setTokens((prev) => {
                       const next = [newToken, ...prev];
-                      setActiveToken(findActiveToken(next));
+                      setActiveToken(findActiveToken(next, ambulanceData.id));
                       return next;
                     });
                   }
@@ -191,7 +199,21 @@ export function useEmergencyTokens() {
             // Only update existing tokens, never add new ones via UPDATE event
             setTokens((prev) => {
               const next = prev.map((t) => (t.id === updatedToken.id ? updatedToken : t));
-              setActiveToken(findActiveToken(next));
+              // For ambulance drivers, pass their ambulance ID to findActiveToken
+              if (isAmbulanceDriver) {
+                supabase
+                  .from('ambulances')
+                  .select('id')
+                  .eq('driver_id', user?.id)
+                  .single()
+                  .then(({ data: ambulanceData }) => {
+                    if (ambulanceData) {
+                      setActiveToken(findActiveToken(next, ambulanceData.id));
+                    }
+                  });
+              } else {
+                setActiveToken(findActiveToken(next));
+              }
               return next;
             });
           } else if (payload.eventType === 'DELETE') {
