@@ -1,7 +1,7 @@
 # MediRoute AI - Smart Ambulance Navigation System
 
 ## 🌐 Live Website
-👉 https://medirouteai.vercel.app
+👉 https://mediroute-ai-main.vercel.app/
 
 ## 🎥 Project Demo Video
 👉 https://drive.google.com/drive/folders/1SaYn1xqYD6Y-XTptdFiBdox-okxGlThD?usp=sharing
