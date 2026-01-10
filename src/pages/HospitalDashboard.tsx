@@ -254,15 +254,17 @@ export default function HospitalDashboard() {
     };
   };
 
-  // Calculate network totals
+  // Calculate network totals using capacity engine data
   const networkStats = hospitals.reduce((acc, hospital) => {
-    const capacity = getHospitalCapacity(hospital.id);
+    const capacity = hospital.capacity;
+    if (!capacity) return acc;
+    
     return {
-      totalBeds: acc.totalBeds + capacity.totalBeds,
-      availableBeds: acc.availableBeds + capacity.availableBeds,
-      totalICU: acc.totalICU + capacity.icuBeds,
-      availableICU: acc.availableICU + capacity.availableICU,
-      incomingAmbulances: acc.incomingAmbulances + capacity.incomingAmbulances
+      totalBeds: acc.totalBeds + capacity.total_beds,
+      availableBeds: acc.availableBeds + capacity.available_beds,
+      totalICU: acc.totalICU + capacity.icu_beds,
+      availableICU: acc.availableICU + capacity.icu_available,
+      incomingAmbulances: acc.incomingAmbulances + capacity.incoming_ambulances
     };
   }, { totalBeds: 0, availableBeds: 0, totalICU: 0, availableICU: 0, incomingAmbulances: 0 });
 
@@ -594,7 +596,12 @@ export default function HospitalDashboard() {
                 <h3 className="text-lg font-semibold">Hospital Status</h3>
                 <div className="space-y-3">
                   {hospitals.map(hospital => {
-                    const capacity = getHospitalCapacity(hospital.id);
+                    const capacity = hospital.capacity;
+                    if (!capacity) return null;
+                    
+                    const loadLevel = capacity.occupancy_percentage < 60 ? 'low' : 
+                                    capacity.occupancy_percentage < 85 ? 'moderate' : 'critical';
+                    
                     return (
                       <Card 
                         key={hospital.id} 
@@ -605,12 +612,12 @@ export default function HospitalDashboard() {
                       >
                         <CardContent className="p-4">
                           {/* Incoming Ambulance Banner */}
-                          {capacity.incomingAmbulances > 0 && (
+                          {capacity.incoming_ambulances > 0 && (
                             <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-2 mb-3">
                               <div className="flex items-center gap-2">
                                 <Ambulance className="w-4 h-4 text-orange-400 animate-pulse" />
                                 <span className="text-sm text-orange-400 font-medium">
-                                  {capacity.incomingAmbulances} ambulance{capacity.incomingAmbulances > 1 ? 's' : ''} incoming
+                                  {capacity.incoming_ambulances} ambulance{capacity.incoming_ambulances > 1 ? 's' : ''} incoming
                                 </span>
                                 <Badge variant="outline" className="text-xs">ETA: 8-12 min</Badge>
                               </div>
@@ -623,42 +630,42 @@ export default function HospitalDashboard() {
                               <p className="text-sm text-muted-foreground">{hospital.address}</p>
                             </div>
                             <Badge 
-                              variant={capacity.loadLevel === 'low' ? 'default' : capacity.loadLevel === 'moderate' ? 'secondary' : 'destructive'}
+                              variant={loadLevel === 'low' ? 'default' : loadLevel === 'moderate' ? 'secondary' : 'destructive'}
                               className={`${
-                                capacity.loadLevel === 'low' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
-                                capacity.loadLevel === 'moderate' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                                loadLevel === 'low' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                                loadLevel === 'moderate' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
                                 'bg-red-500/20 text-red-400 border-red-500/30'
                               }`}
                             >
-                              {capacity.loadLevel === 'low' ? 'Low Load' : capacity.loadLevel === 'moderate' ? 'Moderate Load' : 'Critical Load'}
+                              {loadLevel === 'low' ? 'Low Load' : loadLevel === 'moderate' ? 'Moderate Load' : 'Critical Load'}
                             </Badge>
                           </div>
                           
                           <div className="grid grid-cols-3 gap-3 mb-3">
                             <div className="text-center">
                               <p className="text-sm text-muted-foreground">Total Beds</p>
-                              <p className="font-semibold">{capacity.totalBeds}</p>
+                              <p className="font-semibold">{capacity.total_beds}</p>
                             </div>
                             <div className="text-center bg-green-500/10 rounded p-2">
                               <p className="text-sm text-green-400">Available</p>
-                              <p className="font-semibold text-green-400">{capacity.availableBeds}</p>
+                              <p className="font-semibold text-green-400">{capacity.available_beds}</p>
                             </div>
                             <div className="text-center bg-purple-500/10 rounded p-2">
                               <p className="text-sm text-purple-400">ICU Beds</p>
-                              <p className="font-semibold text-purple-400">{capacity.icuBeds}</p>
+                              <p className="font-semibold text-purple-400">{capacity.icu_beds}</p>
                             </div>
                           </div>
                           
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
                               <span>Occupancy</span>
-                              <span>{capacity.occupancyRate}%</span>
+                              <span>{capacity.occupancy_percentage}%</span>
                             </div>
                             <Progress 
-                              value={capacity.occupancyRate} 
+                              value={capacity.occupancy_percentage} 
                               className={`h-2 ${
-                                capacity.occupancyRate < 60 ? '[&>div]:bg-green-500' :
-                                capacity.occupancyRate < 85 ? '[&>div]:bg-yellow-500' :
+                                capacity.occupancy_percentage < 60 ? '[&>div]:bg-green-500' :
+                                capacity.occupancy_percentage < 85 ? '[&>div]:bg-yellow-500' :
                                 '[&>div]:bg-red-500'
                               }`}
                             />
@@ -676,8 +683,8 @@ export default function HospitalDashboard() {
                 {selectedHospitalId ? (
                   (() => {
                     const hospital = hospitals.find(h => h.id === selectedHospitalId);
-                    const capacity = getHospitalCapacity(selectedHospitalId);
-                    return hospital ? (
+                    const capacity = hospital?.capacity;
+                    return hospital && capacity ? (
                       <Card>
                         <CardContent className="p-4 space-y-4">
                           <div>
@@ -688,19 +695,19 @@ export default function HospitalDashboard() {
                           <div className="grid grid-cols-2 gap-3">
                             <div className="bg-blue-500/10 rounded p-3">
                               <p className="text-sm text-blue-400">Total Beds</p>
-                              <p className="text-xl font-bold text-blue-400">{capacity.totalBeds}</p>
+                              <p className="text-xl font-bold text-blue-400">{capacity.total_beds}</p>
                             </div>
                             <div className="bg-green-500/10 rounded p-3">
                               <p className="text-sm text-green-400">Available</p>
-                              <p className="text-xl font-bold text-green-400">{capacity.availableBeds}</p>
+                              <p className="text-xl font-bold text-green-400">{capacity.available_beds}</p>
                             </div>
                             <div className="bg-purple-500/10 rounded p-3">
                               <p className="text-sm text-purple-400">ICU Total</p>
-                              <p className="text-xl font-bold text-purple-400">{capacity.icuBeds}</p>
+                              <p className="text-xl font-bold text-purple-400">{capacity.icu_beds}</p>
                             </div>
                             <div className="bg-indigo-500/10 rounded p-3">
                               <p className="text-sm text-indigo-400">ICU Available</p>
-                              <p className="text-xl font-bold text-indigo-400">{capacity.availableICU}</p>
+                              <p className="text-xl font-bold text-indigo-400">{capacity.icu_available}</p>
                             </div>
                           </div>
                           
@@ -913,7 +920,7 @@ export default function HospitalDashboard() {
                       // Hospital markers
                       ...hospitals.map(h => ({
                         position: [h.location_lat || 30.7333, h.location_lng || 76.7794] as [number, number],
-                        popup: h.organization_name,
+                        popup: `${h.organization_name}${h.capacity ? ` - ${h.capacity.available_beds}/${h.capacity.total_beds} beds available` : ''}`,
                         icon: 'hospital' as const
                       })),
                       // Ambulance markers

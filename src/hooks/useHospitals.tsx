@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { hospitalCapacityEngine, HospitalCapacity } from '@/services/hospitalCapacityEngine';
 
 export interface Hospital {
   id: string;
@@ -12,6 +13,7 @@ export interface Hospital {
   specialties?: string[];
   capabilities?: any;
   last_updated_specialties?: string;
+  capacity?: HospitalCapacity;
 }
 
 // Default hospital locations with all details (using generated UUIDs)
@@ -91,11 +93,23 @@ export function useHospitals() {
       const dbHospitalNames = new Set(dbHospitals.map(h => h.organization_name));
       const uniqueDefaultHospitals = DEFAULT_HOSPITALS.filter(h => !dbHospitalNames.has(h.organization_name));
       
-      setHospitals([...dbHospitals, ...uniqueDefaultHospitals]);
+      const allHospitals = [...dbHospitals, ...uniqueDefaultHospitals];
+      
+      // Inject capacity data from engine
+      const hospitalsWithCapacity = allHospitals.map(hospital => ({
+        ...hospital,
+        capacity: hospitalCapacityEngine.getCapacity(hospital.id, hospital.organization_name)
+      }));
+      
+      setHospitals(hospitalsWithCapacity);
     } catch (error) {
       console.error('Error fetching hospitals:', error);
-      // On error, use default hospitals
-      setHospitals(DEFAULT_HOSPITALS);
+      // On error, use default hospitals with capacity
+      const defaultWithCapacity = DEFAULT_HOSPITALS.map(hospital => ({
+        ...hospital,
+        capacity: hospitalCapacityEngine.getCapacity(hospital.id, hospital.organization_name)
+      }));
+      setHospitals(defaultWithCapacity);
     } finally {
       setLoading(false);
     }
@@ -128,15 +142,31 @@ export function useHospitals() {
     return [...hospitals]
       .map(h => ({
         ...h,
-        distance: calculateDistanceToHospital(fromLat, fromLng, h)
+        distance: calculateDistanceToHospital(fromLat, fromLng, h),
+        capacity: h.capacity || hospitalCapacityEngine.getCapacity(h.id, h.organization_name)
       }))
       .sort((a, b) => a.distance - b.distance);
   };
+
+  // Force refresh capacity data
+  const refreshCapacities = useCallback(() => {
+    setHospitals(prev => prev.map(hospital => ({
+      ...hospital,
+      capacity: hospitalCapacityEngine.getCapacity(hospital.id, hospital.organization_name)
+    })));
+  }, []);
+
+  // Set up capacity refresh interval
+  useEffect(() => {
+    const interval = setInterval(refreshCapacities, 90000); // Sync with engine updates
+    return () => clearInterval(interval);
+  }, [refreshCapacities]);
 
   return {
     hospitals,
     loading,
     fetchHospitals,
-    getHospitalsByDistance
+    getHospitalsByDistance,
+    refreshCapacities
   };
 }
