@@ -43,11 +43,10 @@ import Map from '@/components/Map';
 import TwoLegRouteMap from '@/components/TwoLegRouteMap';
 import HospitalEmergencyCreator from '@/components/HospitalEmergencyCreator';
 import EmergencyDisplay from '@/components/EmergencyDisplay';
-import HospitalSpecialtyManager from '@/components/HospitalSpecialtyManager';
 import AmbulanceFleetManagement from '@/components/AmbulanceFleetManagement';
 import { toast } from 'sonner';
 
-type NavItem = 'dashboard' | 'ambulances' | 'tokens' | 'livemap' | 'create-emergency' | 'specialties' | 'hospitals' | 'network';
+type NavItem = 'dashboard' | 'ambulances' | 'tokens' | 'livemap' | 'create-emergency' | 'hospitals' | 'network';
 
 export default function HospitalDashboard() {
   const navigate = useNavigate();
@@ -81,7 +80,6 @@ export default function HospitalDashboard() {
     { id: 'tokens' as NavItem, icon: Ticket, label: `Tokens (${pendingTokens.length + assignedTokens.length})` },
     { id: 'ambulances' as NavItem, icon: Ambulance, label: 'Ambulances' },
     { id: 'hospitals' as NavItem, icon: Building2, label: 'Hospital Management' },
-    { id: 'specialties' as NavItem, icon: Settings, label: 'Specialties' },
     { id: 'livemap' as NavItem, icon: MapIcon, label: 'Live Map' },
   ];
 
@@ -896,9 +894,6 @@ export default function HospitalDashboard() {
             </div>
           </div>
         );
-
-      case 'specialties':
-        return <HospitalSpecialtyManager />;
 
       case 'ambulances': {
         return <AmbulanceFleetManagement />;
