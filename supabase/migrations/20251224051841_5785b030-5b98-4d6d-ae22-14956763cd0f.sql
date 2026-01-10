@@ -62,24 +62,21 @@ USING (
     )
 );
 
--- Hospital users can view and update tokens assigned to them or pending
-CREATE POLICY "Hospital users can view pending and assigned tokens"
+-- Hospital users can view and update ALL tokens (not just assigned ones)
+CREATE POLICY "Hospital users can view all tokens"
 ON public.emergency_tokens
 FOR SELECT
-USING (
-    has_role(auth.uid(), 'hospital'::user_role) AND (
-        status = 'pending' OR hospital_id = auth.uid()
-    )
-);
+USING (has_role(auth.uid(), 'hospital'::user_role));
 
-CREATE POLICY "Hospital users can update assigned tokens"
+CREATE POLICY "Hospital users can update all tokens"
 ON public.emergency_tokens
 FOR UPDATE
-USING (
-    has_role(auth.uid(), 'hospital'::user_role) AND (
-        status = 'pending' OR hospital_id = auth.uid()
-    )
-);
+USING (has_role(auth.uid(), 'hospital'::user_role));
+
+CREATE POLICY "Hospital users can create tokens"
+ON public.emergency_tokens
+FOR INSERT
+WITH CHECK (has_role(auth.uid(), 'hospital'::user_role));
 
 -- Create index for faster lookups
 CREATE INDEX idx_emergency_tokens_status ON public.emergency_tokens(status);
