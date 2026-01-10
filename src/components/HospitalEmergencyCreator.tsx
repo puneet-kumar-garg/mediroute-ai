@@ -154,7 +154,7 @@ export default function HospitalEmergencyCreator({
     }
   };
 
-  // Initialize map
+  // Initialize map - prevent automatic actions
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
@@ -164,7 +164,7 @@ export default function HospitalEmergencyCreator({
       attribution: '© OpenStreetMap contributors'
     }).addTo(mapRef.current);
 
-    // Add click handler for patient location
+    // Add click handler for patient location - only when in location step
     mapRef.current.on('click', async (e: L.LeafletMouseEvent) => {
       if (step !== 'location') return;
       
@@ -239,7 +239,7 @@ export default function HospitalEmergencyCreator({
         mapRef.current = null;
       }
     };
-  }, []);
+  }, [step]); // Add step dependency
 
   const placePatientMarker = useCallback((lat: number, lng: number) => {
     if (!mapRef.current) return;
@@ -326,48 +326,55 @@ export default function HospitalEmergencyCreator({
   const handleSelectAmbulance = async (ambulance: AmbulanceInfo & { distance: number }) => {
     if (!patientLocation || !emergencyType || !ambulance.current_lat || !ambulance.current_lng) return;
     
+    // Prevent automatic execution - user must explicitly click
+    if (loading) return;
+    
     setSelectedAmbulance(ambulance);
     setLoading(true);
 
-    // Find best hospital for emergency type
-    const bestHosp = findBestHospital(patientLocation.lat, patientLocation.lng, emergencyType);
-    if (!bestHosp) {
+    try {
+      // Find best hospital for emergency type
+      const bestHosp = findBestHospital(patientLocation.lat, patientLocation.lng, emergencyType);
+      if (!bestHosp) {
+        setLoading(false);
+        return;
+      }
+      setBestHospital(bestHosp);
+
+      // Also find nearest hospital for comparison
+      const nearestHosp = [...hospitals]
+        .map(h => ({
+          ...h,
+          distance: calculateDistance(patientLocation.lat, patientLocation.lng, h.location_lat, h.location_lng)
+        }))
+        .sort((a, b) => a.distance - b.distance)[0];
+      setNearestHospital(nearestHosp);
+
+      // Calculate routes to best hospital
+      const routePatient = await fetchRoute(
+        ambulance.current_lat,
+        ambulance.current_lng,
+        patientLocation.lat,
+        patientLocation.lng
+      );
+
+      const routeHospital = await fetchRoute(
+        patientLocation.lat,
+        patientLocation.lng,
+        bestHosp.location_lat,
+        bestHosp.location_lng
+      );
+
+      if (routePatient && routeHospital) {
+        setRouteToPatient(routePatient);
+        setRouteToHospital(routeHospital);
+        setStep('confirm');
+      }
+    } catch (error) {
+      console.error('Error in ambulance selection:', error);
+    } finally {
       setLoading(false);
-      return;
     }
-    setBestHospital(bestHosp);
-
-    // Also find nearest hospital for comparison
-    const nearestHosp = [...hospitals]
-      .map(h => ({
-        ...h,
-        distance: calculateDistance(patientLocation.lat, patientLocation.lng, h.location_lat, h.location_lng)
-      }))
-      .sort((a, b) => a.distance - b.distance)[0];
-    setNearestHospital(nearestHosp);
-
-    // Calculate routes to best hospital
-    const routePatient = await fetchRoute(
-      ambulance.current_lat,
-      ambulance.current_lng,
-      patientLocation.lat,
-      patientLocation.lng
-    );
-
-    const routeHospital = await fetchRoute(
-      patientLocation.lat,
-      patientLocation.lng,
-      bestHosp.location_lat,
-      bestHosp.location_lng
-    );
-
-    if (routePatient && routeHospital) {
-      setRouteToPatient(routePatient);
-      setRouteToHospital(routeHospital);
-      setStep('confirm');
-    }
-
-    setLoading(false);
   };
 
   const handleConfirmEmergency = () => {
